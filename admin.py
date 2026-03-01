@@ -23,6 +23,7 @@ if current_platform == "win32":
 else:
     current_path = os.getcwd()
 
+
 RESET = "\033[0m"
 GREEN = "\033[92m"
 BLUE = "\033[94m"
@@ -217,9 +218,31 @@ def interaction_loop(client_id, hostname):
     print(f"[信息] 输入 'back' 返回设备列表")
     print(f"[信息] 输入 'help' 查看可用命令")
     
+    # 获取远程系统信息
+    send_command(client_id, "shell", "hostname")
+    time.sleep(0.5)
+    remote_hostname = ""
+    results = get_results(client_id)
+    for r in results:
+        result_data = r.get("result", "")
+        if r.get("result_type") == "shell":
+            remote_hostname = result_data.strip()
+    
+    send_command(client_id, "shell", "whoami")
+    time.sleep(0.5)
+    remote_user = ""
+    results = get_results(client_id)
+    for r in results:
+        result_data = r.get("result", "")
+        if r.get("result_type") == "shell":
+            remote_user = result_data.strip().split('\\')[-1].split('/')[-1]
+    
+    print(f"\n{BLUE}┌──({remote_user}@{remote_hostname})-[~]{RESET}")
+    print(f"{BLUE}└─# {RESET}{GREEN}{hostname}:{current_path}{RESET} ")
+    
     while True:
         try:
-            prompt = f"{GREEN}{hostname}:{current_path}{RESET} > "
+            prompt = f"{BLUE}┌──({remote_user}@{remote_hostname})-[{current_path}]{RESET}\n{BLUE}└─# {GREEN}>{RESET} "
             cmd_input = input(prompt).strip()
         except EOFError:
             print("\n[信息] 退出中...")
