@@ -37,5 +37,3 @@ screenshots/
 
 # Debug
 test_*.py
-splash.py
-start_png.py
