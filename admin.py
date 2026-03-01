@@ -554,21 +554,8 @@ def interaction_loop(client_id, hostname):
             print(f"[错误] 未知命令: {cmd}。使用 'help' 查看命令列表。")
 
 def show_splash():
-    splash = """
-      _   _           _   _ 
-     | \\ | |         | | (_)
-  ___|  \\| | ___   __| |  _ 
- / _ \\ . ` |/ _ \\ / _` | | |
-|  __/ |\\  | (_) | (_| | | |
- \\___|_| \\_|\\___/ \\__,_|_| |
-                           _/ |
-                          |__/ 
-                        
-      [ ShadowGrid v1.0 ]  by 帅丘
-
-      scan. exploit. control.
-"""
-    print(splash)
+    import splash
+    print(splash.get_splash())
 
 def main():
     show_splash()
