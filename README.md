@@ -207,3 +207,6 @@ GPL-3.0 - 仅供合法授权使用
 
 ## 相关文档
 - [COMMANDS.md](./COMMANDS.md) - 详细命令文档
+- [SERVER_API.md](./SERVER_API.md) - 服务端 HTTP API 参考
+- [CLIENT_PROTOCOL.md](./CLIENT_PROTOCOL.md) - 客户端 WebSocket 协议规范
+- [DEVELOPMENT.md](./DEVELOPMENT.md) - 开发文档索引
