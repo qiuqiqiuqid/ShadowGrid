@@ -47,16 +47,19 @@ def verify_password(password: str, admin_password: str) -> bool:
 @app.post("/login")
 async def login(request: Request, password: Optional[str] = Form(default=None), authorization: Optional[str] = Header(None), admin_password: Optional[str] = None):
     actual_password = admin_password or get_admin_password()
+    print(f"[DEBUG] Expected password: {actual_password}")
     
     if authorization and authorization.startswith("Basic "):
         try:
             auth_str = base64.b64decode(authorization[6:]).decode()
+            print(f"[DEBUG] Auth string: {auth_str}")
             _, pwd = auth_str.split(":", 1)
+            print(f"[DEBUG] Extracted password: {pwd}")
             if verify_password(pwd, actual_password):
                 request.session["authenticated"] = True
                 return JSONResponse({"status": "ok", "message": "Login successful"})
-        except:
-            pass
+        except Exception as e:
+            print(f"[DEBUG] Basic Auth error: {e}")
     
     if password and verify_password(password, actual_password):
         request.session["authenticated"] = True
