@@ -1,5 +1,30 @@
 # ShadowGrid - 暗影矩阵
 
+## 变更日志
+
+### v1.0.1 (2026-03-01)
+
+**优化改进**
+- 性能优化：命令响应延迟降至 0.5 秒
+- 新增 shell 命令支持
+- 优化 ls 命令输出格式
+- 截图保存添加时间戳
+- 移除调试信息和 echo/time 命令
+
+**问题修复**
+- 修复 Basic Auth 认证错误
+- 修复 ImageGrab 检查逻辑
+- 修复 ls 命令 NoneType 错误
+- 修复路径安全检查
+- 修复 SSL 证书验证
+
+**技术改进**
+- 简化 login 接口
+- 优化 command 响应时间
+
+### v1.0 (2026-02-15)
+- 初始版本
+
 ## 启动画面
 
 ```
@@ -10,7 +35,7 @@
 ║    ██║   ██║██║   ██║██╔══██╗██╔══██║     ║
 ║    ╚██████╔╝╚██████╔╝██║  ██║██║  ██║     ║
 ║     ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝     ║
-║          ShadowGrid v1.0                   ║
+║          ShadowGrid v1.0.1                 ║
 ║      Secure Remote Administration Tool     ║
 ╚════════════════════════════════════════════╝
 ```
@@ -65,7 +90,7 @@ dl report.pdf
 dl report.pdf C:\Downloads
 
 # 上传文件
-udbackup.zip
+ud backup.zip
 ud backup.zip /tmp
 
 # 删除文件
@@ -145,21 +170,25 @@ openssl req -new -x509 -key certs/server.key -out certs/server.crt -days 365
 ## 目录结构
 
 ```
-SafeRemoteTool/
-├── shadowgrid-agent.exe      # 客户端可执行文件（打包版）
-├── server.py                 # 服务端主程序
-├── admin.py                  # 管理端界面
-├── README.md                 # 项目文档
-├── requirements.txt          # 依赖包列表
-├── certs/                    # SSL/TLS 证书目录
+ShadowGrid/
+├── dist/
+│   └── shadowgrid-agent.exe  # 客户端可执行文件（打包版）
+├── build/                     # 构建临时目录
+├── server.py                  # 服务端主程序
+├── client.py                  # 客户端主程序
+├── admin.py                   # 管理端界面
+├── README.md                  # 项目文档
+├── COMMANDS.md                # 命令详细文档
+├── requirements.txt           # 依赖包列表
+├── shadowgrid-agent.spec      # PyInstaller 打包配置
+├── certs/                     # SSL/TLS 证书目录
 │   ├── server.crt
 │   └── server.key
-├── screenshots/              # 截图保存目录
+├── screenshots/               # 截图保存目录（运行时生成）
 │   └── *.png
-└── templates/                # Web 页面模板
+└── templates/                 # Web 页面模板
     ├── login.html
-    ├── welcome.html
-    └── dashboard.html
+    └── index.html
 ```
 
 ## 安全提示
@@ -226,7 +255,10 @@ python admin.py
 ```
 
 ## 许可证
-仅供合法授权使用
+GPL-3.0 - 仅供合法授权使用
 
 ## 作者
 帅丘
+
+## 相关文档
+- [COMMANDS.md](./COMMANDS.md) - 详细命令文档
