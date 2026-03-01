@@ -12,6 +12,25 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Requ
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.sessions import SessionMiddleware
+from pydantic import BaseModel
+import uvicorn
+import ssl
+import os
+import uuid
+import asyncio
+import base64
+import json
+import time
+from pathlib import Path
+from typing import Optional
+import argparse
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, Form, Header
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 import uvicorn
 import ssl
@@ -20,11 +39,15 @@ ADMIN_PASSWORD = "admin123"
 
 SERVER_URL = "https://113.45.254.80:8443"
 SERVER_HOST = "0.0.0.0"
-SERVER_PORT = 8443
+SERVER_PORT = 8444
 CLIENT_ID = None
 CLIENT_HOSTNAME = None
 
+SECRET_KEY = os.environ.get("SECRET_KEY", "shadowgrid-secret-key-change-in-production")
+
 app = FastAPI(title="ShadowGrid")
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+
 clients: dict = {}
 os.makedirs("screenshots", exist_ok=True)
 
@@ -41,12 +64,15 @@ def get_admin_password(password_arg: Optional[str] = None) -> str:
 
 
 def verify_password(password: str, admin_password: str) -> bool:
-    return password == admin_password
+    print(f"[DEBUG] verify_password: compare '{password}' (len={len(password)}) == '{admin_password}' (len={len(admin_password)})")
+    result = password == admin_password
+    print(f"[DEBUG] verify_password result: {result}")
+    return result
 
 
 @app.post("/login")
 async def login(request: Request, password: Optional[str] = Form(default=None), authorization: Optional[str] = Header(None), admin_password: Optional[str] = None):
-    actual_password = admin_password or get_admin_password()
+    actual_password = ADMIN_PASSWORD
     print(f"[DEBUG] Expected password: {actual_password}")
     
     if authorization and authorization.startswith("Basic "):
