@@ -18,7 +18,7 @@ import ssl
 
 ADMIN_PASSWORD = "admin123"
 
-SERVER_URL = "https://113.45.254.80:8443"
+SERVER_URL = "https://113.45.254.80:8444"
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8444
 CLIENT_ID = None
