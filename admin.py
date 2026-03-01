@@ -114,6 +114,7 @@ def print_clients():
     print()
 
 def send_command(client_id, cmd_type, payload=None):
+    time.sleep(0.1)  
     try:
         data = {"type": cmd_type}
         if payload is not None:
@@ -144,14 +145,15 @@ def get_results(client_id):
     except Exception as e:
         return [{"error": str(e)}]
 
-def wait_for_result(client_id, timeout=10):
+def wait_for_result(client_id, timeout=0.8):
     start_time = time.time()
     while time.time() - start_time < timeout:
         results = get_results(client_id)
         if results:
             return results
-        time.sleep(0.5)
+        time.sleep(0.02)  # 从 0.5 改为 0.1
     return None
+
 
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")

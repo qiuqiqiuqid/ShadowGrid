@@ -78,7 +78,9 @@ def handle(cmd):
     if t == "test": return {"status":"ok","result":"OK","result_type":"test"}
     if t == "echo": return {"status":"ok","result":str(p),"result_type":"echo"}
     if t == "time": return {"status":"ok","result":time.strftime("%Y-%m-%d %H:%M:%S"),"result_type":"time"}
-    if t == "screenshot" and ImageGrab:
+    if t == "screenshot"  :
+        if not ImageGrab:
+            return {"status":"error","result":"ImageGrab module not available","result_type":"error"}
         img = ImageGrab.grab()
         import tempfile
         with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as f:
@@ -91,7 +93,7 @@ def handle(cmd):
             path = current_dir
         else:
             path = os.path.join(current_dir, p)
-        print(f"[Debug] ls: p={repr(p)}, current_dir={repr(current_dir)}, path={repr(path)}")
+        
         if not is_safe_path(current_dir, path):
             return {"status":"error","result":"Invalid path","result_type":"error"}
         path = os.path.abspath(path)
