@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ShadowGrid Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: #16213e; padding: 40px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 300px; text-align: center; }
+        h1 { margin-bottom: 30px; color: #0f3460; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #0f3460; border-radius: 5px; background: #0f3460; color: #fff; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #e94560; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #ff6b6b; }
+        .error { color: #e94560; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>ShadowGrid</h1>
+        <form method="post">
+            <input type="password" name="password" placeholder="Admin Password" required>
+            <button type="submit">Login</button>
+        </form>
+        {% if error %}
+        <p class="error">{{ error }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

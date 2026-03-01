@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+websocket-client
+Pillow
+requests
+PyOpenSSL
