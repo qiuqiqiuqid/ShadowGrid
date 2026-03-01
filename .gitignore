@@ -34,3 +34,8 @@ key.pem
 screenshots/
 *.log
 *.db
+
+# Debug
+test_*.py
+splash.py
+start_png.py
