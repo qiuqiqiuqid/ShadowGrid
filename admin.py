@@ -42,9 +42,10 @@ def login():
     print("[Login] Enter password:")
     password = getpass.getpass("> ")
     try:
+        auth_b64 = base64.b64encode(f"admin:{password}".encode()).decode()
         response = requests.post(
             f"{SERVER_URL}/login",
-            data={"password": password},
+            headers={"Authorization": f"Basic {auth_b64}"},
             verify=False,
             timeout=10
         )
