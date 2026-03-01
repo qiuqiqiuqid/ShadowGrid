@@ -12,25 +12,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Requ
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.sessions import SessionMiddleware
-from pydantic import BaseModel
-import uvicorn
-import ssl
-import os
-import uuid
-import asyncio
-import base64
-import json
-import time
-from pathlib import Path
-from typing import Optional
-import argparse
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, Form, Header
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from fastapi.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 import uvicorn
 import ssl
@@ -46,7 +27,6 @@ CLIENT_HOSTNAME = None
 SECRET_KEY = os.environ.get("SECRET_KEY", "shadowgrid-secret-key-change-in-production")
 
 app = FastAPI(title="ShadowGrid")
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 clients: dict = {}
 os.makedirs("screenshots", exist_ok=True)
