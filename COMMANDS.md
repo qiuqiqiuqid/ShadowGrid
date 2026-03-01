@@ -1,385 +1,255 @@
 # ShadowGrid 命令文档
 
-## 基本命令
+## 快速开始
+
+ShadowGrid 提供三种使用方式：
+1. **admin.py** - 交互式命令行管理工具（推荐）
+2. **client.py** - 直接运行客户端
+3. **shadowgrid-agent.exe** - 打包后的可执行文件
+
+## 交互式命令（admin.py）
+
+### 设备管理
+
+| 命令 | 说明 |
+|------|------|
+| `list` | 列出所有已连接的设备 |
+| `use <编号>` | 选择设备（通过编号） |
+| `back` | 返回设备列表 |
+| `clear` | 清屏 |
+| `help` | 显示帮助 |
+| `quit` | 退出程序 |
+
+### 远程命令（选择设备后）
+
+| 命令 | 参数 | 说明 |
+|------|------|------|
+| `ls [路径]` | 可选路径 | 列出目录内容 |
+| `cd <目录>` | 目录路径 | 切换目录 |
+| `pwd` | 无 | 显示当前目录 |
+| `cat <文件>` | 文件路径 | 查看文件内容 |
+| `dl <文件> [目录]` | 文件和可选保存目录 | 下载文件 |
+| `ud <文件> [目录]` | 本地文件和可选远程目录 | 上传文件 |
+| `rm <路径> [-r]` | 路径和可选递归参数 | 删除文件/目录 |
+| `mv <源> <目标>` | 源路径和目标路径 | 移动/重命名 |
+| `file <路径>` | 文件路径 | 查看文件类型 |
+| `find <模式> [-t 类型]` | 搜索模式和可选类型 | 查找文件 |
+| `shell <命令>` | Shell 命令 | 执行系统命令 |
+| `screenshot` | 无 | 截取远程屏幕 |
+| `echo <文本>` | 文本 | 回显测试 |
+| `time` | 无 | 获取远程时间 |
+| `test` | 无 | 测试连接 |
+| `back` | 无 | 返回设备列表 |
+
+### 交互示例
+
+```bash
+# 运行管理工具
+python admin.py
+
+# 查看设备列表
+srt > list
+
+# 选择第一个设备
+srt > use 1
+
+# 进入设备交互模式
+desktop:~ > ls
+
+# 查看指定目录
+desktop:~ > ls C:\Users
+
+# 切换目录
+desktop:~ > cd Documents
+
+# 查看文件内容
+desktop:Documents > cat readme.txt
+
+# 下载文件到指定目录
+desktop:Documents > dl report.pdf C:\Downloads
+
+# 上传文件到远程
+desktop:~ > ud backup.zip /tmp
+
+# 执行系统命令
+desktop:~ > shell ipconfig
+
+# 截取屏幕
+desktop:~ > screenshot
+
+# 返回设备列表
+desktop:~ > back
+```
+
+## 文件操作命令详解
 
 ### ls / dir
+列出目录内容，支持指定路径。
 
-列出目录内容。
-
-用法：
-```
-ls [路径]
-```
-
-示例：
-```
-ls                    # 列出当前目录
-ls /etc              # 列出/etc目录
-ls C:/Users          # 列出Windows用户目录
+```bash
+ls              # 列出当前目录
+ls /etc         # 列出 Linux 目录
+ls C:\Users     # 列出 Windows 目录
 ```
 
-输出格式：
-- 目录以 `/` 结尾
-- 文件正常显示
+输出格式：目录名带 `/`，文件正常显示。
 
 ### cd
+切换当前工作目录。
 
-切换目录。
-
-用法：
-```
-cd <目录>
-```
-
-示例：
-```
+```bash
 cd /tmp
 cd Documents
 cd ..
 ```
 
 ### pwd
+显示当前工作目录路径。
 
-显示当前工作目录。
-
-用法：
-```
-pwd
-```
-
-示例：
-```
+```bash
 pwd
 ```
 
 ### cat
+显示文件内容（Base64 编码传输，自动解码显示）。
 
-显示文件内容。
-
-用法：
-```
-cat <文件>
-```
-
-示例：
-```
+```bash
+cat config.txt
 cat /etc/passwd
-cat config.json
-cat script.py
+cat C:\Windows\System32\drivers\etc\hosts
 ```
 
 ### dl
+下载远程文件到本地。
 
-下载文件。
-
-用法：
-```
-dl <文件> [目录]
-```
-
-示例：
-```
-dl logfile.txt              # 下载到默认下载目录
-dl /etc/passwd /tmp        # 下载到/tmp目录
-dl secret.txt downloads/   # 下载到downloads目录
+```bash
+dl report.pdf                    # 下载到默认目录
+dl report.pdf C:\Downloads       # 指定保存目录
+dl /var/log/syslog /tmp          # 下载 Linux 日志
 ```
 
 ### ud
+上传本地文件到远程。
 
-上传文件。
-
-用法：
-```
-ud <本地文件> [远程目录]
-```
-
-示例：
-```
-ud myscript.py
-ud myscript.py /tmp
-ud config.json .
+```bash
+ud backup.zip                    # 上传到当前目录
+ud backup.zip /tmp               # 上传到指定目录
+ud script.py .                   # 上传到远程当前目录
 ```
 
 ### rm
-
 删除文件或目录。
 
-用法：
-```
-rm <路径> [-r]
-```
-
-示例：
-```
+```bash
 rm temp.txt              # 删除文件
-rm /tmp/cache -r        # 递归删除目录
-rm test/old -r          # 删除旧目录
+rm old_project -r        # 递归删除目录
+rm /tmp/cache -r         # Linux 删除目录
 ```
 
 ### mv
-
 移动或重命名文件/目录。
 
-用法：
-```
-mv <源> <目标>
-```
-
-示例：
-```
+```bash
 mv old.txt new.txt       # 重命名
-mv file.txt /tmp         # 移动到/tmp
-mv demo/old demo/new    # 移动并重命名
+mv file.txt /tmp         # 移动到 /tmp
+mv demo/old demo/new     # 移动并重命名
 ```
 
 ### file
+查看文件类型，支持识别：
+- text (txt, md, json, xml, log, csv, ini)
+- executable (exe, bat, cmd, sh, bin, dll, so, dylib)
+- image (jpg, jpeg, png, gif, bmp, svg, ico)
+- pdf
+- audio (mp3, wav, flac, aac)
+- video (mp4, avi, mkv, mov)
+- archive (zip, tar, gz, 7z, rar)
+- directory
+- shortcut
 
-查看文件类型。
-
-用法：
+```bash
+file document.pdf
+file script.py
+file archive.zip
 ```
-file <路径>
-```
-
-示例：
-```
-file script.py          # 显示: text
-file image.jpg          # 显示: image
-file archive.zip        # 显示: archive
-```
-
-支持的文件类型：
-- text：文本文件（.txt, .md, .json等）
-- executable：可执行文件（.exe, .bat等）
-- image：图片文件（.jpg, .png等）
-- pdf：PDF文件
-- audio：音频文件
-- video：视频文件
-- archive：压缩文件（.zip, .tar等）
-- directory：目录
-- shortcut：快捷方式
 
 ### find
+查找文件，支持通配符和类型过滤。
 
-查找文件。
-
-用法：
-```
-find <模式> [-t <类型>]
-```
-
-参数：
-- `<模式>`：文件名匹配模式
-- `-t`：文件类型过滤（f=文件, d=目录）
-
-示例：
-```
-find .py               # 查找所有.py文件
-find password -t f     # 查找名为password的文件
-find test -t d         # 查找名为test的目录
-find log -t f         # 查找所有包含log的文件
+```bash
+find *.log               # 查找所有 log 文件
+find secret -t f         # 查找名为 secret 的文件
+find tmp -t d            # 查找名为 tmp 的目录
+find *.py -t f           # 查找所有 Python 文件
 ```
 
-示例输出：
-```
-  [FILE] /var/log/syslog
-  [DIR] /tmp/test
-  [FILE] /home/user/test.py
-```
+### shell
+执行系统命令，返回命令输出。
 
-## 高级命令
+```bash
+shell ipconfig           # Windows 网络配置
+shell df -h             # Linux 磁盘使用
+shell ps aux            # Linux 进程列表
+```
 
 ### screenshot
+截取远程桌面屏幕，自动保存截图。
 
-截取远程屏幕。
-
-用法：
-```
+```bash
 screenshot
 ```
 
-示例：
+截图保存在 `screenshots/` 目录，文件名格式：
 ```
-screenshot
-```
-
-结果：
-截图保存在 `screenshots/` 目录，文件名格式：`{client_id}_shot.png`
-
-### echo
-
-回显文本。
-
-用法：
-```
-echo <文本>
+{client_id}_{timestamp}_shot.png
 ```
 
-示例：
-```
-echo Hello ShadowGrid
-echo Test message
-```
+### echo / time / test
+这三个是调试命令，用于测试连接。
 
-### time
-
-获取远程时间。
-
-用法：
-```
-time
-```
-
-示例：
-```
-time
-```
-
-### test
-
-测试连接。
-
-用法：
-```
-test
-```
-
-示例：
-```
-test
-```
-
-## 通用命令
-
-### help
-
-显示帮助信息。
-
-用法：
-```
-help
-```
-
-### list
-
-列出所有连接的设备。
-
-用法：
-```
-list
-```
-
-### use
-
-选择设备。
-
-用法：
-```
-use <编号>
-```
-
-示例：
-```
-use 1    # 选择第一个设备
-use 3    # 选择第三个设备
-```
-
-### back
-
-返回设备列表。
-
-用法：
-```
-back
-```
-
-### clear
-
-清屏。
-
-用法：
-```
-clear
-```
-
-### quit
-
-退出程序。
-
-用法：
-```
-quit
-```
-
-## 交互模式
-
-选择设备后，可以直接使用上述命令：
-
-```
-srt > use 1
-[信息] 已连接到设备: DESKTOP-XXX (ID: abc12345)
-desktop:~ > ls
-desktop:~ > cd Documents
-desktop:Documents > cat file.txt
-desktop:Documents > dl file.txt
-desktop:Documents > back
+```bash
+echo Hello World         # 回显文本
+time                     # 获取远程时间
+test                     # 测试连接
 ```
 
 ## 错误处理
 
-常见错误：
+常见错误信息：
 
-1. **无效路径**：路径超出允许范围或不存在
-2. **文件未找到**：指定的文件或目录不存在
-3. **权限拒绝**：没有足够的权限访问资源
-4. **类型错误**：`-t` 参数必须是 `f` 或 `d`
-
-## 客户端命令
-
-客户端支持的命令类型：
-
-| 命令 | 说明 |
+| 错误 | 说明 |
 |------|------|
-| test | 测试连接 |
-| echo | 回显 |
-| time | 时间 |
-| screenshot | 截图 |
-| ls | 列表 |
-| cat | 查看文件 |
-| dl | 下载 |
-| ud | 上传 |
-| cd | 切换目录 |
-| pwd | 当前目录 |
-| rm | 删除 |
-| mv | 移动 |
-| file | 文件类型 |
-| find | 查找 |
+| `Invalid path` | 路径超出安全范围或不存在 |
+| `File not found` | 指定文件不存在 |
+| `Directory not found` | 指定目录不存在 |
+| `Path traversal detected` | 检测到路径遍历攻击 |
+| `Need base64_data and save_as` | 上传缺少必要参数 |
 
-## 示例场景
+## 技术细节
 
-### 场景1：文件传输
+### 命令传输流程
+
 ```
-use 1
-cd /var/log
-dl syslog /tmp/
-dl auth.log /tmp/
+Admin → Server (HTTP POST /command/{id})
+Server → Client (WebSocket)
+Client → Server (WebSocket result)
+Server → Admin (HTTP GET /results/{id})
 ```
 
-### 场景2：远程调查
-```
-use 2
-ls
-find .py -t f
-find secret -t f
-cat config.json
-```
+### 路径安全检查
 
-### 场景3：系统清理
-```
-use 3
-cd /tmp
-find cache -t d
-rm cache_dir -r
-find .tmp -t f
-rm temp.tmp
-```
+为防止路径遍历攻击，客户端会检查：
+- 相对路径会转换为绝对路径
+- 路径必须在允许范围内
+- 跨盘符路径在 Windows 上受限
+
+### 数据传输
+
+- 文件内容使用 Base64 编码
+- 文本文件自动解码显示
+- 二进制文件保存为原始格式
+
+## 相关文档
+
+- [README.md](../README.md) - 项目简介和快速开始
+- [CHANGELOG.md](../CHANGELOG.md) - 版本更新记录
