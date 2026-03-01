@@ -119,9 +119,10 @@ def register(req: dict):
 
 @app.get("/clients")
 def list_clients():
+    print(f"[DEBUG] /clients called, clients: {[(k, v.get('hostname'), v.get('ip'), v.get('ws')) for k, v in clients.items()]}")
     return {"clients": [
         {"id": k, "hostname": v.get("hostname"), "ip": v.get("ip")}
-        for k, v in clients.items() if v["ws"]
+        for k, v in clients.items() if v.get("ws")
     ]}
 
 

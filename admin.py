@@ -30,10 +30,10 @@ YELLOW = "\033[93m"
 
 def prompt_config():
     global SERVER_URL
-    print("[Setup] Enter server URL (e.g., https://113.45.254.80:8443):")
+    print("[Setup] Enter server URL (e.g., https://113.45.254.80:8444):")
     SERVER_URL = input("> ").strip()
     if not SERVER_URL:
-        SERVER_URL = "https://113.45.254.80:8443"
+        SERVER_URL = "https://113.45.254.80:8444"
     print(f"[Setup] Using server: {SERVER_URL}")
 
 
@@ -77,9 +77,13 @@ def req(method, endpoint, data=None):
             auth_str = f"{SESSION_AUTH[0]}:{SESSION_AUTH[1]}"
             auth_b64 = base64.b64encode(auth_str.encode()).decode()
             request.add_header("Authorization", f"Basic {auth_b64}")
+            print(f"[DEBUG] Sending request to {url} with Basic Auth")
         with urllib.request.urlopen(request, timeout=10.0) as response:
-            return json.loads(response.read().decode())
+            result = json.loads(response.read().decode())
+            print(f"[DEBUG] Response: {result}")
+            return result
     except Exception as e:
+        print(f"[DEBUG] Request error: {e}")
         return {"error": str(e)}
 
 def fetch_clients():

