@@ -223,7 +223,8 @@ if __name__ == "__main__":
             app,
             host=SERVER_HOST_ENV,
             port=SERVER_PORT_ENV,
-            ssl=ssl_context
+            ssl_keyfile=key_path,
+            ssl_certfile=cert_path
         )
     else:
         print("[ERROR] Cannot enable SSL, using HTTP (insecure)")
