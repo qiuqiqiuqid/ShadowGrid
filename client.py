@@ -97,7 +97,7 @@ def handle(cmd):
         if not is_safe_path(current_dir, path):
             return {"status":"error","result":"Invalid path","result_type":"error"}
         path = os.path.abspath(path)
-        items = [{"name":f,"dir":os.path.isdir(os.path.join(path,f))} for f in os.listdir(path)]
+        items = os.listdir(path)
         return {"status":"ok","result":items,"result_type":"list"}
     if t == "cat":
         try:

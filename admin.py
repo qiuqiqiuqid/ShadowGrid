@@ -187,12 +187,7 @@ def format_ls_output(items):
     if not items:
         return
     for item in items:
-        name = item.get("name", "")
-        is_dir = item.get("dir", False)
-        if is_dir:
-            print(f"{GREEN}{name}{RESET}/")
-        else:
-            print(f"  {name}")
+        print(f"  {item}")
     
     
 def print_failed_result(r):
