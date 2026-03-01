@@ -186,8 +186,18 @@ def print_help():
 def format_ls_output(items):
     if not items:
         return
+    if not isinstance(items, list):
+        return
     for item in items:
-        print(f"  {item}")
+        if isinstance(item, dict):
+            name = item.get("name", "")
+            is_dir = item.get("dir", False)
+            if is_dir:
+                print(f"  {name}/")
+            else:
+                print(f"  {name}")
+        else:
+            print(f"  {item}")
     
     
 def print_failed_result(r):
