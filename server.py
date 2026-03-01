@@ -62,13 +62,13 @@ async def login(request: Request, password: Optional[str] = Form(default=None), 
             _, pwd = auth_str.split(":", 1)
             print(f"[DEBUG] Extracted password: {pwd}")
             if verify_password(pwd, actual_password):
-                request.session["authenticated"] = True
+                print("[DEBUG] Login successful via Basic Auth")
                 return JSONResponse({"status": "ok", "message": "Login successful"})
         except Exception as e:
             print(f"[DEBUG] Basic Auth error: {e}")
     
     if password and verify_password(password, actual_password):
-        request.session["authenticated"] = True
+        print("[DEBUG] Login successful via password")
         return JSONResponse({"status": "ok", "message": "Login successful"})
     
     raise HTTPException(status_code=401, detail="Invalid password")
@@ -230,8 +230,7 @@ if __name__ == "__main__":
             app,
             host=SERVER_HOST_ENV,
             port=SERVER_PORT_ENV,
-            ssl_keyfile=key_path,
-            ssl_certfile=cert_path
+            ssl=ssl_context
         )
     else:
         print("[ERROR] Cannot enable SSL, using HTTP (insecure)")

