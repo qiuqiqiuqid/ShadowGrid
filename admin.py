@@ -18,27 +18,54 @@ CURRENT_HOSTNAME = ""
 CURRENT_PATH = os.getcwd().replace('/', '\\')
 
 RESET = "\033[0m"
+BOLD = "\033[1m"
+ITALIC = "\033[3m"
+UNDERLINE = "\033[4m"
+
 GREEN = "\033[92m"
+LGREEN = "\033[1;92m"
+DGREEN = "\033[2;92m"
+
 BLUE = "\033[94m"
+LBLUE = "\033[1;94m"
+DBLUE = "\033[2;94m"
+
 YELLOW = "\033[93m"
+LYELLOW = "\033[1;93m"
+DYELLOW = "\033[2;93m"
+
+RED = "\033[91m"
+LRED = "\033[1;91m"
+DRED = "\033[2;91m"
+
+PURPLE = "\033[95m"
+LPURPLE = "\033[1;95m"
+DPURPLE = "\033[2;95m"
+
+CYAN = "\033[96m"
+LCYAN = "\033[1;96m"
+DCYAN = "\033[2;96m"
+
+GRAY = "\033[90m"
+LGRAY = "\033[1;90m"
 timestamp = time.strftime("%Y%m%d_%H%M%S")
 
 
 def prompt_config():
     """配置服务器地址"""
     global SERVER_URL
-    print("[配置] 请输入服务器地址 (例如: https://113.45.254.80:8444):")
-    SERVER_URL = input("> ").strip()
+    print(f"{GRAY}[配置]{RESET} 请输入服务器地址 (例如: {LYELLOW}https://113.45.254.80:8444{RESET}):")
+    SERVER_URL = input(f"{LYELLOW}> {RESET}").strip()
     if not SERVER_URL:
         SERVER_URL = "https://113.45.254.80:8444"
-    print(f"[配置] 使用服务器: {SERVER_URL}")
+    print(f"{GRAY}[配置]{RESET} 使用服务器: {LGREEN}{SERVER_URL}{RESET}")
 
 
 def login():
     """登录认证"""
     global SESSION_AUTH
-    print("[登录] 请输入密码:")
-    password = getpass.getpass("> ")
+    print(f"{GRAY}[登录]{RESET} 请输入密码:")
+    password = getpass.getpass(f"{LYELLOW}> {RESET}")
     try:
         auth_b64 = base64.b64encode(f"admin:{password}".encode()).decode()
         response = requests.post(
@@ -50,17 +77,17 @@ def login():
         if response.status_code == 200:
             data = response.json()
             if data.get("status") == "ok":
-                print("[登录] 认证成功")
+                print(f"{LGREEN}[登录]{RESET} {BOLD}认证成功{RESET}")
                 SESSION_AUTH = ("admin", password)
                 return True
             else:
-                print("[登录] 认证失败")
+                print(f"{RED}[登录]{RESET} {BOLD}认证失败{RESET}")
                 return False
         else:
-            print(f"[登录] HTTP {response.status_code}")
+            print(f"{RED}[登录]{RESET} HTTP {response.status_code}")
             return False
     except Exception as e:
-        print(f"[登录] 错误: {e}")
+        print(f"{RED}[登录]{RESET} 错误: {e}")
         return False
 
 
@@ -102,15 +129,15 @@ def fetch_clients():
 def print_clients():
     """打印设备列表"""
     if not CLIENTS:
-        print("[信息] 没有已连接的设备")
+        print(f"{GRAY}[信息]{RESET} 没有已连接的设备")
         return
-    print("\n[信息] 可用设备:")
+    print(f"\n{LGREEN}┌─[ 可用设备 ]{RESET}")
     for idx, client in enumerate(CLIENTS, 1):
         cid = client.get("id", "unknown")
         hostname = client.get("hostname", "unknown")
         ip = client.get("ip", "unknown")
-        print(f"  {idx}. {hostname} ({ip}) [ID: {cid}]")
-    print()
+        print(f"{BLUE}  {idx}. {LGREEN}{hostname}{RESET} ({CYAN}{ip}{RESET}) {GRAY}[ID: {PURPLE}{cid}{GRAY}]{RESET}")
+    print(f"{BLUE}└────────────{RESET}\n")
 
 
 def send_command(client_id, cmd_type, payload=None):
@@ -180,29 +207,29 @@ def clear_screen():
 
 def print_help():
     """打印帮助"""
-    print("\n可用命令：")
-    print(f"  {YELLOW}list{RESET}              列出所有可用设备")
-    print(f"  {YELLOW}use <编号>{RESET}          选择设备")
-    print(f"  {YELLOW}back{RESET}              返回设备列表")
-    print(f"  {YELLOW}clear{RESET}             清屏")
-    print(f"  {YELLOW}help{RESET}              显示帮助")
-    print(f"  {YELLOW}quit{RESET}              退出")
+    print(f"\n{LGREEN}可用命令：{RESET}")
+    print(f"  {YELLOW}list{RESET}              {LGREEN}列出所有可用设备{RESET}")
+    print(f"  {YELLOW}use <编号>{RESET}          {LGREEN}选择设备{RESET}")
+    print(f"  {YELLOW}back{RESET}              {LGREEN}返回设备列表{RESET}")
+    print(f"  {YELLOW}clear{RESET}             {LGREEN}清屏{RESET}")
+    print(f"  {YELLOW}help{RESET}              {LGREEN}显示帮助{RESET}")
+    print(f"  {YELLOW}quit{RESET}              {LRED}退出{RESET}")
     print("")
-    print("设备命令：")
-    print(f"  {YELLOW}ls [路径]{RESET}         列出目录")
-    print(f"  {YELLOW}cd <目录>{RESET}         切换目录")
-    print(f"  {YELLOW}pwd{RESET}               显示当前目录")
-    print(f"  {YELLOW}cat <文件>{RESET}        查看文件")
-    print(f"  {YELLOW}dl <文件> [目录]{RESET}   下载")
-    print(f"  {YELLOW}ud <文件> [目录]{RESET}   上传")
-    print(f"  {YELLOW}rm <路径> [-r]{RESET}    删除")
-    print(f"  {YELLOW}mv <源> <目标>{RESET}    移动")
-    print(f"  {YELLOW}file <路径>{RESET}       查看类型")
-    print(f"  {YELLOW}find <模式> [-t]{RESET}  查找")
-    print(f"  {YELLOW}shell <命令>{RESET}      执行命令")
-    print(f"  {YELLOW}screenshot{RESET}         截图")
-    print(f"  {YELLOW}help{RESET}              显示帮助")
-    print(f"  {YELLOW}back{RESET}              返回")
+    print(f"{BLUE}设备命令：{RESET}")
+    print(f"  {YELLOW}ls [路径]{RESET}         {LGREEN}列出目录{RESET}")
+    print(f"  {YELLOW}cd <目录>{RESET}         {LGREEN}切换目录{RESET}")
+    print(f"  {YELLOW}pwd{RESET}               {LGREEN}显示当前目录{RESET}")
+    print(f"  {YELLOW}cat <文件>{RESET}        {LGREEN}查看文件{RESET}")
+    print(f"  {YELLOW}dl <文件> [目录]{RESET}   {LGREEN}下载{RESET}")
+    print(f"  {YELLOW}ud <文件> [目录]{RESET}   {LGREEN}上传{RESET}")
+    print(f"  {YELLOW}rm <路径> [-r]{RESET}    {LRED}删除{RESET}")
+    print(f"  {YELLOW}mv <源> <目标>{RESET}    {LGREEN}移动{RESET}")
+    print(f"  {YELLOW}file <路径>{RESET}       {LGREEN}查看类型{RESET}")
+    print(f"  {YELLOW}find <模式> [-t]{RESET}  {LGREEN}查找{RESET}")
+    print(f"  {YELLOW}shell <命令>{RESET}      {LGREEN}执行命令{RESET}")
+    print(f"  {YELLOW}screenshot{RESET}         {LGREEN}截图{RESET}")
+    print(f"  {YELLOW}help{RESET}              {LGREEN}显示帮助{RESET}")
+    print(f"  {YELLOW}back{RESET}              {LGREEN}返回{RESET}")
 
 
 def interaction_loop(client_id, hostname):
@@ -212,9 +239,10 @@ def interaction_loop(client_id, hostname):
     CURRENT_HOSTNAME = hostname
     CURRENT_PATH = os.getcwd().replace('/', '\\')
     
-    print(f"[信息] 已连接到设备: {hostname} (ID: {client_id})")
-    print(f"[信息] 输入 'back' 返回设备列表")
-    print(f"[信息] 输入 'help' 查看可用命令")
+    print(f"{LGREEN}┌─[ 连接成功 ]{RESET}")
+    print(f"{GRAY}│{RESET} 已连接到设备: {CYAN}{hostname}{RESET} ({PURPLE}ID: {client_id}{PURPLE}){RESET}")
+    print(f"{GRAY}├{RESET} 输入 '{YELLOW}back{RESET}' 返回设备列表")
+    print(f"{GRAY}└{RESET} 输入 '{YELLOW}help{RESET}' 查看可用命令")
     
     # 获取远程系统信息
     send_command(client_id, "shell", "hostname")
@@ -231,18 +259,18 @@ def interaction_loop(client_id, hostname):
         if r.get("result_type") == "shell":
             remote_user = r.get("result", "").strip().split('\\')[-1].split('/')[-1]
     
-    print(f"\n{BLUE}┌──({remote_user}@{remote_hostname})-[~]{RESET}")
-    print(f"{BLUE}└─# {RESET}{GREEN}{hostname}:{CURRENT_PATH}{RESET} ")
+    print(f"\n{BLUE}┌──({LGREEN}{remote_user}{RESET}@{PURPLE}{remote_hostname}{RESET})-[{CYAN}~{RESET}]{RESET}")
+    print(f"{BLUE}└─# {RESET}{LGREEN}{hostname}{RESET}:{YELLOW}{CURRENT_PATH}{RESET} ")
     
     while True:
         try:
-            prompt = f"{BLUE}┌──({remote_user}@{remote_hostname})-[{CURRENT_PATH}]{RESET}\n{BLUE}└─# {GREEN}>{RESET} "
+            prompt = f"{BLUE}┌──({LGREEN}{remote_user}{RESET}@{PURPLE}{remote_hostname}{RESET})-[{CYAN}{CURRENT_PATH}{RESET}]{RESET}\n{BLUE}└─# {LGREEN}>{RESET} "
             cmd_input = input(prompt).strip()
         except EOFError:
-            print("\n[信息] 退出中...")
+            print(f"\n{GRAY}[信息]{RESET} 退出中...")
             return
         except KeyboardInterrupt:
-            print("\n[信息] 使用 'quit' 退出")
+            print(f"\n{GRAY}[信息]{RESET} 使用 '{YELLOW}quit{RESET}' 退出")
             continue
         
         if not cmd_input:
@@ -253,10 +281,10 @@ def interaction_loop(client_id, hostname):
         arg = parts[1] if len(parts) > 1 else None
         
         if cmd == "quit":
-            print("[信息] 退出中...")
+            print(f"{GRAY}[信息]{RESET} 退出中...")
             sys.exit(0)
         elif cmd == "back":
-            print("[信息] 返回设备列表中...")
+            print(f"{GRAY}[信息]{RESET} 返回设备列表中...")
             CURRENT_DEVICE = None
             CURRENT_HOSTNAME = ""
             return
@@ -281,9 +309,9 @@ def interaction_loop(client_id, hostname):
                             save_path = os.path.join("screenshots", f"{client_id}_{timestamp}_{filename}")
                             with open(save_path, "wb") as f:
                                 f.write(img_bytes)
-                            print(f"[结果] 截图已保存: {save_path}")
+                            print(f"{LGREEN}[结果]{RESET} 截图已保存: {CYAN}{save_path}{RESET}")
                         except Exception as e:
-                            print(f"[错误] 无法保存截图: {e}")
+                            print(f"{RED}[错误]{RESET} 无法保存截图: {DRED}{e}{RESET}")
                     elif r.get("result_type") == "error":
                         print_failed_result(r)
         elif cmd == "ls":
@@ -296,7 +324,7 @@ def interaction_loop(client_id, hostname):
                     format_ls_output(r.get("result", []))
         elif cmd == "cd":
             if not arg:
-                print("[错误] 用法: cd <目录>")
+                print(f"{RED}[错误]{RESET} 用法: cd <目录>")
                 continue
             full_path = os.path.normpath(os.path.join(CURRENT_PATH, arg))
             send_command(client_id, "cd", full_path)
@@ -305,7 +333,7 @@ def interaction_loop(client_id, hostname):
                 for r in results:
                     if r.get("result_type") == "dir":
                         CURRENT_PATH = full_path
-                        print(f"[结果] 已切换到目录 {CURRENT_PATH}")
+                        print(f"{LGREEN}[结果]{RESET} 已切换到目录 {CYAN}{CURRENT_PATH}{RESET}")
                     else:
                         print_failed_result(r)
         elif cmd == "pwd":
@@ -313,10 +341,10 @@ def interaction_loop(client_id, hostname):
             results = wait_for_result(client_id)
             if results:
                 for r in results:
-                    print(f"[结果] {r.get('result', '')}")
+                    print(f"{CYAN}[结果]{RESET} {r.get('result', '')}")
         elif cmd == "cat":
             if not arg:
-                print("[错误] 用法: cat <文件路径>")
+                print(f"{RED}[错误]{RESET} 用法: cat <文件路径>")
                 continue
             full_path = os.path.normpath(os.path.join(CURRENT_PATH, arg))
             send_command(client_id, "cat", full_path)
@@ -327,16 +355,18 @@ def interaction_loop(client_id, hostname):
                         file_data = r.get("result", "")
                         if file_data:
                             try:
-                                print(f"[结果] {base64.b64decode(file_data).decode()}")
+                                content = base64.b64decode(file_data).decode()
+                                print(f"{LGREEN}[结果]{RESET}")
+                                print(f"{DCYAN}{content}{RESET}")
                             except Exception as e:
-                                print(f"[错误] 解码失败: {e}")
+                                print(f"{RED}[错误]{RESET} 解码失败: {DRED}{e}{RESET}")
                         else:
-                            print("[错误] 文件为空")
+                            print(f"{RED}[错误]{RESET} 文件为空")
                     else:
                         print_failed_result(r)
         elif cmd == "dl":
             if not arg:
-                print("[错误] 用法: dl <文件路径> [保存目录]")
+                print(f"{RED}[错误]{RESET} 用法: dl <文件路径> [保存目录]")
                 continue
             parts = arg.split(maxsplit=1)
             file_path = parts[0]
@@ -352,18 +382,18 @@ def interaction_loop(client_id, hostname):
                         save_path = os.path.join(save_dir, r.get("filename", "downloaded"))
                         with open(save_path, "wb") as f:
                             f.write(file_bytes)
-                        print(f"[结果] 文件已下载: {save_path}")
+                        print(f"{LGREEN}[结果]{RESET} 文件已下载: {CYAN}{save_path}{RESET}")
                     else:
                         print_failed_result(r)
         elif cmd == "ud":
             if not arg:
-                print("[错误] 用法: ud <本地文件> [远程目录]")
+                print(f"{RED}[错误]{RESET} 用法: ud <本地文件> [远程目录]")
                 continue
             parts = arg.split(maxsplit=1)
             local_file = parts[0]
             remote_dir = parts[1] if len(parts) > 1 else "."
             if not os.path.isfile(local_file):
-                print("[错误] 本地文件未找到")
+                print(f"{RED}[错误]{RESET} 本地文件未找到")
                 continue
             with open(local_file, "rb") as f:
                 base64_data = base64.b64encode(f.read()).decode()
@@ -375,7 +405,7 @@ def interaction_loop(client_id, hostname):
                     print_failed_result(r)
         elif cmd == "rm":
             if not arg:
-                print("[错误] 用法: rm <路径> [-r]")
+                print(f"{RED}[错误]{RESET} 用法: rm <路径> [-r]")
                 continue
             recursive = arg.endswith(" -r")
             path = arg[:-3] if recursive else arg
@@ -387,7 +417,7 @@ def interaction_loop(client_id, hostname):
                     print_failed_result(r)
         elif cmd == "mv":
             if not arg or len(arg.split()) < 2:
-                print("[错误] 用法: mv <源> <目标>")
+                print(f"{RED}[错误]{RESET} 用法: mv <源> <目标>")
                 continue
             parts = arg.split(maxsplit=1)
             src, dst = parts[0], parts[1]
@@ -400,7 +430,7 @@ def interaction_loop(client_id, hostname):
                     print_failed_result(r)
         elif cmd == "file":
             if not arg:
-                print("[错误] 用法: file <路径>")
+                print(f"{RED}[错误]{RESET} 用法: file <路径>")
                 continue
             full_path = os.path.normpath(os.path.join(CURRENT_PATH, arg))
             send_command(client_id, "file", {"path": full_path})
@@ -408,12 +438,12 @@ def interaction_loop(client_id, hostname):
             if results:
                 for r in results:
                     if r.get("result_type") == "file":
-                        print(f"[结果] {r.get('result', '')}")
+                        print(f"{PURPLE}[结果]{RESET} {r.get('result', '')}")
                     else:
                         print_failed_result(r)
         elif cmd == "find":
             if not arg:
-                print("[错误] 用法: find <模式> [-t 类型]")
+                print(f"{RED}[错误]{RESET} 用法: find <模式> [-t 类型]")
                 continue
             parts = arg.split()
             pattern = None
@@ -428,7 +458,7 @@ def interaction_loop(client_id, hostname):
                         pattern = parts[i]
                 i += 1
             if not pattern:
-                print("[错误] 用法: find <模式> [-t 类型]")
+                print(f"{RED}[错误]{RESET} 用法: find <模式> [-t 类型]")
                 continue
             full_path = os.path.normpath(os.path.join(CURRENT_PATH, pattern))
             send_command(client_id, "find", {"path": full_path, "name": pattern, "type": file_type})
@@ -437,25 +467,32 @@ def interaction_loop(client_id, hostname):
                 for r in results:
                     if r.get("result_type") == "list":
                         for item in r.get("result", []):
-                            print(f"  [{item.get('type', '').upper()}] {item.get('path', '')}")
+                            item_type = item.get("type", "")
+                            item_path = item.get("path", "")
+                            if item_type.lower() == "dir":
+                                print(f"  {LGREEN}[{item_type.upper()}]{RESET} {CYAN}{item_path}{RESET}")
+                            else:
+                                print(f"  {YELLOW}[{item_type.upper()}]{RESET} {item_path}")
                     else:
                         print_failed_result(r)
         elif cmd == "shell":
             if not arg:
-                print("[错误] 用法: shell <命令>")
+                print(f"{RED}[错误]{RESET} 用法: shell <命令>")
                 continue
             send_command(client_id, "shell", arg)
             results = wait_for_result(client_id)
             if results:
                 for r in results:
                     if r.get("result_type") == "shell":
-                        print(f"[结果]\n{r.get('result', '')}")
+                        output = r.get("result", "")
+                        print(f"{LGREEN}[结果]{RESET}")
+                        print(f"{DCYAN}{output}{RESET}")
                     else:
                         print_failed_result(r)
         elif cmd == "help":
             print_help()
         else:
-            print(f"[错误] 未知命令: {cmd}")
+            print(f"{RED}[错误]{RESET} 未知命令: {cmd}")
 
 
 def show_splash():
@@ -475,16 +512,16 @@ def main():
         print("[错误] 登录失败")
         sys.exit(1)
     
-    print("[信息] 输入 'help' 查看可用命令")
+    print(f"{LGREEN}[信息]{RESET} 输入 '{YELLOW}help{RESET}' 查看可用命令")
     
     while True:
         try:
-            cmd_input = input("srt > ").strip()
+            cmd_input = input(f"{BLUE}srt{RESET}{GRAY}>{RESET} ").strip()
         except EOFError:
-            print("\n[信息] 退出中...")
+            print(f"\n{GRAY}[信息]{RESET} 退出中...")
             break
         except KeyboardInterrupt:
-            print("\n[信息] 使用 'quit' 退出")
+            print(f"\n{GRAY}[信息]{RESET} 使用 '{YELLOW}quit{RESET}' 退出")
             continue
         
         if not cmd_input:
@@ -495,7 +532,7 @@ def main():
         arg = parts[1] if len(parts) > 1 else None
         
         if cmd == "quit":
-            print("[信息] 退出中...")
+            print(f"{GRAY}[信息]{RESET} 退出中...")
             break
         elif cmd == "help":
             print_help()
@@ -504,21 +541,21 @@ def main():
             print_clients()
         elif cmd == "use":
             if not arg:
-                print("[错误] 用法: use <编号>")
+                print(f"{RED}[错误]{RESET} 用法: use <编号>")
                 continue
             try:
                 num = int(arg)
                 if num < 1 or num > len(CLIENTS):
-                    print(f"[错误] 无效的设备编号")
+                    print(f"{RED}[错误]{RESET} 无效的设备编号")
                     continue
                 selected = CLIENTS[num - 1]
                 interaction_loop(selected.get("id"), selected.get("hostname"))
             except ValueError:
-                print("[错误] 无效的设备编号")
+                print(f"{RED}[错误]{RESET} 无效的设备编号")
         elif cmd == "clear":
             clear_screen()
         else:
-            print(f"[错误] 未知命令: {cmd}。使用 'help' 查看命令列表。")
+            print(f"{RED}[错误]{RESET} 未知命令: {cmd}。使用 '{YELLOW}help{RESET}' 查看命令列表。")
 
 
 if __name__ == "__main__":
