@@ -2,12 +2,16 @@
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org)
-[![Remote Control](https://img.shields.io/badge/status-beta-green)](https://img.shields.io/badge/status-beta-green)
+[![Remote Control](https://img.shields.io/badge/status-stable-green)](https://img.shields.io/badge/status-stable-green)
 
 一个轻量级、安全的远程控制系统，用于合法授权的远程管理与运维监控。  
 让您的远程管理工作变得 "不那么可怕" —— 至少比敲黑乎乎的终端要友好一点 😎
 
-> ⚠️ **法律声明**: 本项目仅供合法授权的本地网络管理使用。请勿将其用于非法目的（我们不想上新闻）。开发者不对滥用行为负责。
+> ⚠️ **法律声明**: 本项目仅供合法授权的本地网络管理使用。请勿将其用于任何非法目的。开发者不对滥用行为负责。此软件仅供教育和研究目的。
+
+## 🔒 重要提醒 (请务必仔细阅读)
+
+本项目不提供预编译的二进制文件。出于安全和合法考虑，所有使用者必须自行编译程序，不能直接使用他人提供的二进制版本。用户需要按照下方的编译说明自行完成编译流程。
 
 ## 🚀 简介：这是什么？
 
@@ -15,68 +19,82 @@
 
 想象一下：你在办公室，却能操作千里之外的电脑，就像拥有"超能力"一样。但请注意，这不是魔法（遗憾的是），而是技术的力量。
 
-## 🎯 新功能亮点
+## 🎯 功能亮点
 
-### 1. 进程管理 (`ps`, `kill`)
+### 基础功能
+- 🔐 **加密通信** - HTTPS + WebSocket Secure (WSS)
+- 💻 **命令执行** - 远程执行 Shell 命令
+- 📁 **文件管理** - 上传/下载/删除/移动/查找文件
+- 📸 **屏幕截图** - 远程桌面实时截图
+- 📂 **目录浏览** - 浏览远程文件系统
+
+### 进程管理 (`ps`, `kill`)
 - 想知道远程机器正在跑哪些程序？`ps` 命令帮你看一遍
 - 某个程序跑飞了拖慢系统？`kill` 命令让它说拜拜
 - 像在本地操作一样流畅，再也不用担心远程卡死的问题
 
-### 2. 系统持久化 (`persist`)
+### 系统持久化 (`persist`)
 - 客户端不再是个"随用随走"的过客
 - 通过 `persist` 命令，它可以成为系统不可或缺的一部分
 - 系统每次启动都会自动召唤它（只要您允许的话）
 
-### 3. 本地配置记忆 (`config` & `history`)
-- 自动记住上次的服务器地址，下次启动秒连
-- 密码可以安全保存，选择性记住登录凭据
-- 命令历史记录，再也不用重复输入长命令
-- 最近设备自动记录，一键回连
+### 本地配置与历史 (`config`, `history`)
+- **自动记住配置** - 上次使用的服务器地址
+- **记住密码功能** - 可选的安全密码记忆
+- **命令历史** - 支持方向键浏览历史命令
+- **命令补全** - 通过 `compgen` 智能补全命令
 
-## 🔧 现有功能保持不变
+## 🔧 安装与编译说明 (必须自行编译)
 
-| 功能 | 描述 | 使用场景 |
-|------|------|----------|
-| 🔒 加密通信 | HTTPS + WebSocket Secure (WSS) | 保证数据传输安全 |
-| 💻 命令执行 | 远程执行 Shell 命令 | 各种系统管理操作 |
-| 📁 文件管理 | 上传/下载/删除/移动/查找文件 | 文件资料传输 |
-| 📸 屏幕截图 | 远程桌面实时截图 | 可视化远程诊断 |
-| 📂 目录浏览 | 浏览远程文件系统 | 云端文件管理器替代 |
+### 环境准备
+确保已安装Python 3.7+及以上版本。
 
-## 📋 主要操作命令
-
-### 一般管理命令
+### 1. 安装依赖
 ```bash
-# 初次启动
+pip install -r requirements.txt
+```
+
+### 2. 程序使用说明
+```bash
+# 启动服务端
+python server.py --admin-password your_password
+
+# 启动客户端
+python client.py
+
+# 启动管理台
 python admin.py
-
-# 首次使用会提示输入服务器地址和密码
-# 如果已保存过配置，可以直接使用上次设定
-
-# 设备管理
-list                 # 显示所有已连接设备
-use <编号>           # 选择特定设备（如果保存过最近设备，会优先显示）
-back                 # 返回设备列表
-help                 # 查看所有命令的帮助
 ```
 
-### 命令历史功能
+> **安全提醒**: 请使用安全且不易猜测的密码，建议使用强密码生成器。
+
+### 3. 自己编译程序 (重要!)
+**⚠️ 本项目不提供任何预先编译的二进制文件。出于网络安全和个人责任考虑，所有用户都需要自行编译。**
+
+#### 普通精简版本编译：
 ```bash
-# 查看近期执行过的命令
-history
-
-# 清空历史记录
-history -c
-
-# 执行上一次命令（实验性支持）
-!!
+# 使用PyInstaller编译精简版
+pyinstaller --onefile -n shadowgrid-client Client.py  # 客户端
+pyinstaller --onefile -n shadowgrid-server server.py  # 服务端
+pyinstaller --onefile -n shadowgrid-admin admin.py    # 管理端
 ```
 
-### 设备远程命令
+#### 后台静默版本编译 (不显示控制台窗口)：
+```bash
+# 编译在后台运行且不显示窗口的版本
+pyinstaller --onefile --windowed -n shadowgrid-client-silent Client.py
+```
+> **重要**: 使用 `--windowed` 或 `console=False` 参数编译的版本将在后台运行而不会显示控制台窗口，这适用于生产环境的长期部署。
+
+编译后的文件位于 `dist/` 目录。
+
+## 📋 使用示例 - 让我们玩起来！
+
+### 基本操作
 ```bash
 # 看看远程目录里有什么宝贝（不建议搜寻隐私文件哦！）
 ls
-ls C:\Windows\System32  # 这个目录可能有点吓人
+ls C:\  # 查看根目录
 
 # 优雅地更换当前目录
 cd Documents
@@ -85,7 +103,7 @@ cd Documents
 cat readme.txt
 ```
 
-### 进程管理功能
+### 新增的进程管理功能
 ```bash
 # 查看所有正在运行的进程
 ps
@@ -96,7 +114,7 @@ kill 1234  # 1234是进程ID，别错杀无辜（比如系统进程）
 terminate 1234  # kill 命令的另一个别名
 ```
 
-### 系统持久化管理
+### 持久化管理
 ```bash
 # 让客户端开机自动启动，真正"扎根"在系统里
 persist install
@@ -117,6 +135,35 @@ ud backup.zip
 ud photo.jpg /home/user/shared
 ```
 
+### 系统配置管理
+```bash
+# 查看当前配置
+settings current
+
+# 清除配置（包括密码）
+settings reset
+
+# 清除命令历史
+settings clear_hist
+
+# 查看特定配置项
+settings server_url  # 服务器地址
+settings last_client_id  # 最后连接的客户端
+settings auto_remember_password  # 是否自动记住密码
+```
+
+### 命令历史功能
+```bash
+# 查看命令历史
+history
+
+# 清除历史记录
+history -c
+
+# 重新执行上一条命令
+!!
+```
+
 ### 更多高级操作
 ```bash
 # 移动/重命名文件（重命名的艺术）
@@ -134,16 +181,7 @@ screenshot
 
 > 隐藏彩蛋：如果你发现系统中有可疑进程，`ps` 命令可以帮助你找出真相。不过请注意：请勿随意杀死系统进程，否则后果自负。别拿菜刀切手指还怪刀子锋利。
 
-## ⚙️ 本地配置 - 让一切变得简单
-
-首次成功连接后，系统将在 `~/.shadowgrid/config.ini` 创建配置文件，自动保存：
-
-- 服务器地址（可选）
-- 登录密码（可选，取决于是否选择保存）
-- 最后使用的客户端
-- 配置项偏好
-
-### 配置技巧 - 成为我们的一份子
+## ⚙️ 配置技巧 - 成为我们的一份子
 
 所有组件都在8444端口和谐共处：
 - 服务端: `https://your-server:8444`
@@ -157,17 +195,21 @@ screenshot
 ### 给管理员的重要提醒
 1. **通信加密** - 所有流量穿了"隐身衣"（HTTPS/WSS）
 2. **密码强度** - 建议用 "自行车密码破解难度" 的密码，如 `MyP@ssw0rd!2026$ecure`
-3. **合法使用** - 仅用于合法授权的网络管理，不要尝试挑战法律底线
-4. **谨慎保存密码** - 使用本地配置功能时要评估设备安全性
-5. **常规升级** - 定期换密码和证书，就像定期洗澡一样重要
+3. **本地编译** - 必须自行编译，不得使用他人提供的二进制版
+4. **合法使用** - 仅用于合法授权的网络管理，不要尝试挑战法律底线
+5. **定期更换凭证** - 定期更改密码和证书
+6. **防火墙设置** - 确保端口配置符合安全政策
 
 ### 防火墙配置（让"外星人"进来）
 ```bash
-# Windows - 永远不要关闭安全意识
-netsh advfirewall firewall add rule name="ShadowGrid" dir=in action=allow protocol=TCP localport=8444
-
 # Linux - 简单粗暴
 ufw allow 8444/tcp
+
+# macOS - 使用pfctl
+echo 'pass in proto tcp from any to any port 8444' >> /etc/pf.conf
+
+# Windows - PowerShell
+New-NetFirewallRule -DisplayName "ShadowGrid" -Direction Inbound -Protocol TCP -LocalPort 8444 -Action Allow
 ```
 
 ## 📁 架构解析 - 慕课时刻
@@ -207,26 +249,42 @@ ufw allow 8444/tcp
 - ConfigParser - 配置管理神器
 - Readline - 命令历史专家
 
-## 📦 打包发布 - 让它独自旅行
+## 📦 编译发布 - 打包说明
 
-要用PyInstaller把客户端打包成独立程序（这样就不用到处安装Python了）：
+**重要提醒: 本项目不提供任何预编译版本。出于安全责任考虑，所有用户必须使用源代码自行编译：**
 
+### 普通精简版编译:
 ```bash
-pyinstaller shadowgrid-agent.spec
+pyinstaller --onefile --exclude-module tkinter \
+  --exclude-module matplotlib --exclude-module pygame \
+  -n shadowgrid-client Client.py
+pyinstaller --onefile --exclude-module tkinter \
+  --exclude-module matplotlib --exclude-module pygame \
+  -n shadowgrid-server server.py
+pyinstaller --onefile --exclude-module tkinter \
+  --exclude-module matplotlib --exclude-module pygame \
+  -n shadowgrid-admin admin.py
 ```
 
-打包好的文件在 `dist/shadowgrid-agent.exe`，把它放到任意地方运行。就像把一个微型管理员塞进一个文件里。
+### 后台运行版编译 (静默无声):
+```bash
+pyinstaller --onefile --windowed --exclude-module tkinter \
+  --exclude-module matplotlib --exclude-module pygame \
+  -n shadowgrid-client-silent Client.py
+```
+
+编译完成后，所有文件位于 `dist/` 目录。
 
 ## 🎯 未来规划：下一步要做什么
 
 - [x] 进程管理（已完成！）  
 - [x] 持久化安装（已完成！）  
-- [x] 本地配置与命令历史（已完成！）  
-- [ ] 图形化界面（可能需要聘请UI设计师）  
-- [ ] 多语言支持（中文、English等）  
-- [ ] 插件系统（允许社区贡献功能）  
-- [ ] 消息推送（类似微信通知的功能）  
-- [ ] 自愈特性（即使网络中断也能自我恢复）
+- [x] 本地配置与历史（已完成！）
+- [x] SSL证书修复（已完成！）
+- [x] 后台静默运行（已完成！）
+- [ ] Web管理界面（待计划）  
+- [ ] 多因素认证（待计划)
+- [ ] 自动更新功能（待计划）
 
 ## 🤝 贡献代码 - 一起来造火箭
 
@@ -259,15 +317,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 如果这个项目帮到了您，或者您遇到什么问题，可以：
 - 提交GitHub Issues（最推荐）
-- Fork后自己玩耍
+- Fork后自己研究和玩耍
 - 点个star以表示赞赏（免费又有效）
 
 ---
 
 <div align="center">
 
-**请务必只用于合法授权的目的，文明使用这个小工具**
-
+**请务必只用于合法授权的目的，文明使用这个小工具**  
+**⚠️ 请自行编译，不提供预编译版本**  
 _"代码改变世界，但前提是你用得对"_ © 2026
 
 </div>
