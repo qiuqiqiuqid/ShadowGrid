@@ -506,6 +506,13 @@ def interaction_loop(client_id, hostname):
                             name = proc.get('name', 'N/A')[:20] if isinstance(proc, dict) else 'N/A' # 限制进程名长度
                             username = proc.get('username', 'N/A') if isinstance(proc, dict) else 'N/A'
                             status = proc.get('status', '') if isinstance(proc, dict) else ''
+                            
+                            # 确保所有值都不是None
+                            pid = pid if pid is not None else 'N/A'
+                            name = name if name is not None else 'N/A'
+                            username = username if username is not None else 'N/A'
+                            status = status if status is not None else ''
+                            
                             print(f"{CYAN}{pid:<8}{RESET} {name:<22} {username:<15}")
                         print(f"\n{LGREEN}[结果]{RESET} Found {len(processes)} processes\n")
                     else:
