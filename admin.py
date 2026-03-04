@@ -9,6 +9,14 @@ import getpass
 import requests
 import ssl
 import subprocess
+import readline  # 为了支持命令历史
+import configparser  # 用于配置文件管理
+from pathlib import Path
+
+# 配置文件路径定义
+CONFIG_DIR = Path.home() / ".shadowgrid"
+CONFIG_FILE = CONFIG_DIR / "config.ini"
+HISTORY_FILE = CONFIG_DIR / "history"
 
 SERVER_URL = None
 SESSION_AUTH = None
@@ -16,6 +24,77 @@ CLIENTS = {}
 CURRENT_DEVICE = None
 CURRENT_HOSTNAME = ""
 CURRENT_PATH = os.getcwd().replace('/', '\\')
+
+# 配置和历史变量
+CONFIG = {}
+CMD_HISTORY = []
+
+def load_config():
+    """加载配置文件"""
+    global CONFIG
+    CONFIG = {"server_url": "", "last_client_id": "", "last_hostname": ""}
+    
+    if not CONFIG_DIR.exists():
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    
+    if CONFIG_FILE.exists():
+        try:
+            config_parser = configparser.ConfigParser()
+            config_parser.read(CONFIG_FILE, encoding='utf-8')
+            
+            if 'shadowgrid' in config_parser:
+                section = config_parser['shadowgrid']
+                CONFIG = {
+                    "server_url": section.get('server_url', ''),
+                    "last_password": section.get('last_password', ''),
+                    "last_client_id": section.get('last_client_id', ''),
+                    "last_hostname": section.get('last_hostname', ''),
+                    "auto_remember_password": section.getboolean('auto_remember_password', fallback=False),
+                }
+        except Exception:
+            pass  # 如果配置文件损坏则使用默认配置
+    
+    # 加载命令历史
+    if HISTORY_FILE.exists():
+        try:
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                import readline
+                for line in f.readlines():
+                    line = line.strip()
+                    if line:
+                        readline.add_history(line)
+                        CMD_HISTORY.append(line)
+        except Exception:
+            pass
+
+def save_config(config_dict):
+    """保存配置到文件"""
+    try:
+        if not CONFIG_DIR.exists():
+            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        
+        config_parser = configparser.ConfigParser()
+        config_parser['shadowgrid'] = {}
+        
+        for key, value in config_dict.items():
+            config_parser.set('shadowgrid', key, str(value))
+        
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            config_parser.write(f)
+    except Exception:
+        pass  # 配存失败不影响正常使用
+
+def save_history():
+    """保存命令历史到文件"""
+    try:
+        if not CONFIG_DIR.exists():
+            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            for cmd in CMD_HISTORY:
+                f.write(cmd + '\n')
+    except Exception:
+        pass  # 历史保存失败不影响正常使用
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -54,18 +133,59 @@ timestamp = time.strftime("%Y%m%d_%H%M%S")
 def prompt_config():
     """配置服务器地址"""
     global SERVER_URL
+    # 尝试从配置文件获取上次的服务器地址，默认为空
+    last_server = CONFIG.get("server_url", "")
+    
+    if last_server:
+        print(f"{GRAY}[配置]{RESET} 使用上次连接的服务器地址: {LGREEN}{last_server}{RESET}")
+        use_last = input(f"{GRAY}[配置]{RESET} 是否使用上次地址? (Y/n): ").strip().lower()
+        if use_last != 'n':
+            SERVER_URL = last_server
+            return
+    
     print(f"{GRAY}[配置]{RESET} 请输入服务器地址 (例如: {LYELLOW}https://113.45.254.80:8444{RESET}):")
-    SERVER_URL = input(f"{LYELLOW}> {RESET}").strip()
-    if not SERVER_URL:
-        SERVER_URL = "https://113.45.254.80:8444"
+    user_input = input(f"{LYELLOW}> {RESET}").strip()
+    SERVER_URL = user_input if user_input else "https://113.45.254.80:8444"
+    
+    # 更新配置并保存
+    CONFIG["server_url"] = SERVER_URL
+    save_config(CONFIG)
+    
     print(f"{GRAY}[配置]{RESET} 使用服务器: {LGREEN}{SERVER_URL}{RESET}")
 
 
 def login():
     """登录认证"""
     global SESSION_AUTH
+    # 检查上次保存的密码是否可以使用
+    if CONFIG.get("auto_remember_password", False) and CONFIG.get("last_password", "") != "":
+        password = CONFIG["last_password"]
+        remember_choice = input(f"{GRAY}[登录]{RESET} 使用保存的密码重新登录? (Y/n): ").strip().lower()
+        if remember_choice != 'n':
+            try:
+                auth_b64 = base64.b64encode(f"admin:{password}".encode()).decode()
+                response = requests.post(
+                    f"{SERVER_URL}/login",
+                    headers={"Authorization": f"Basic {auth_b64}"},
+                    verify=False,
+                    timeout=10
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("status") == "ok":
+                        print(f"{LGREEN}[登录]{RESET} {BOLD}认证成功（使用缓存密码）{RESET}")
+                        SESSION_AUTH = ("admin", password)
+                        return True
+                    else:
+                        print(f"{RED}[登录]{RESET} {BOLD}认证失败{RESET}，请重新输入密码")
+                else:
+                    print(f"{RED}[登录]{RESET} HTTP {response.status_code}，请重新输入密码")
+            except Exception as e:
+                print(f"{RED}[登录]{RESET} 错误: {e}，请重新输入密码")
+    
     print(f"{GRAY}[登录]{RESET} 请输入密码:")
     password = getpass.getpass(f"{LYELLOW}> {RESET}")
+    
     try:
         auth_b64 = base64.b64encode(f"admin:{password}".encode()).decode()
         response = requests.post(
@@ -78,6 +198,14 @@ def login():
             data = response.json()
             if data.get("status") == "ok":
                 print(f"{LGREEN}[登录]{RESET} {BOLD}认证成功{RESET}")
+                
+                # 询问是否保存密码
+                save_choice = input(f"{GRAY}[登录]{RESET} 是否记住密码? (Y/n): ").strip().lower()
+                if save_choice != 'n':
+                    CONFIG["last_password"] = password
+                    CONFIG["auto_remember_password"] = "true"
+                    save_config(CONFIG)
+                
                 SESSION_AUTH = ("admin", password)
                 return True
             else:
@@ -212,6 +340,9 @@ def print_help():
     print(f"  {YELLOW}use <编号>{RESET}          {LGREEN}选择设备{RESET}")
     print(f"  {YELLOW}back{RESET}              {LGREEN}返回设备列表{RESET}")
     print(f"  {YELLOW}clear{RESET}             {LGREEN}清屏{RESET}")
+    print(f"  {YELLOW}history{RESET}           {LGREEN}查看命令历史{RESET}")
+    print(f"  {YELLOW}history -c{RESET}        {LGREEN}清除命令历史{RESET}")
+    print(f"  {YELLOW}!!{RESET}                {LGREEN}执行上一条命令（待完善）{RESET}")
     print(f"  {YELLOW}help{RESET}              {LGREEN}显示帮助{RESET}")
     print(f"  {YELLOW}quit{RESET}              {LRED}退出{RESET}")
     print("")
@@ -275,7 +406,13 @@ def interaction_loop(client_id, hostname):
         except KeyboardInterrupt:
             print(f"\n{GRAY}[信息]{RESET} 使用 '{YELLOW}quit{RESET}' 退出")
             continue
-        
+
+        # 记录命令到历史 (同样在此循环中也记录)
+        if cmd_input and not cmd_input.lower().startswith(("history", "!!")):
+            import readline
+            readline.add_history(cmd_input)
+            CMD_HISTORY.append(cmd_input)
+
         if not cmd_input:
             continue
         
@@ -561,6 +698,9 @@ def show_splash():
 
 def main():
     """主函数"""
+    # 加载配置和命令历史
+    load_config()
+    
     show_splash()
     print("[信息] ShadowGrid Admin Console v1.0")
     
@@ -581,6 +721,12 @@ def main():
         except KeyboardInterrupt:
             print(f"\n{GRAY}[信息]{RESET} 使用 '{YELLOW}quit{RESET}' 退出")
             continue
+
+        # 添加命令到历史记录（如果不是历史相关命令，防止混乱）
+        if cmd_input and not cmd_input.lower().startswith(("history", "!!")):
+            import readline
+            readline.add_history(cmd_input)
+            CMD_HISTORY.append(cmd_input)
         
         if not cmd_input:
             continue
@@ -607,14 +753,47 @@ def main():
                     print(f"{RED}[错误]{RESET} 无效的设备编号")
                     continue
                 selected = CLIENTS[num - 1]
+                
+                # 保存当前选中的客户端ID和主机名到配置
+                CONFIG["last_client_id"] = selected.get("id")
+                CONFIG["last_hostname"] = selected.get("hostname", "")
+                save_config(CONFIG)
+                
                 interaction_loop(selected.get("id"), selected.get("hostname"))
             except ValueError:
                 print(f"{RED}[错误]{RESET} 无效的设备编号")
         elif cmd == "clear":
             clear_screen()
+        elif cmd == "history":
+            # 判断参数
+            if arg == "-c" or arg == "clear":
+                CMD_HISTORY.clear()
+                try:
+                    # 清空readline历史
+                    import readline
+                    readline.clear_history()
+                except:
+                    pass
+                print(f"{LGREEN}[历史]{RESET} 命令历史已清空")
+            else:
+                print(f"{LGREEN}┌─[ 命令历史 ]{RESET}")
+                for i, cmd in enumerate(CMD_HISTORY[-20:], 1):  # 最近20条命令
+                    print(f"{BLUE}  {i:2}. {RESET}{cmd}")
+                print(f"{BLUE}└────────────{RESET}")
+        elif cmd == "!!":  # 执行上次的命令
+            if CMD_HISTORY:
+                last_cmd = CMD_HISTORY[-1]
+                print(f"{LGREEN}[执行]{RESET} {last_cmd}")
+                print(f"{YELLOW}[提示]{RESET} !!命令重新执行功能待完善，可手动输入历史命令")
+            else:
+                print(f"{GRAY}[历史]{RESET} 没有历史命令")
         else:
             print(f"{RED}[错误]{RESET} 未知命令: {cmd}。使用 '{YELLOW}help{RESET}' 查看命令列表。")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        # 退出时保存命令历史记录
+        save_history()
