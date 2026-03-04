@@ -228,6 +228,9 @@ def generate_ssl_cert():
                     key_size=2048,
                 )
                 
+                # 修复时间相关的未来兼容问题  
+                now = datetime.datetime.now(datetime.timezone.utc)
+                
                 # 创建证书
                 subject = issuer = x509.Name([
                     x509.NameAttribute(NameOID.COUNTRY_NAME, "CN"),
@@ -246,9 +249,9 @@ def generate_ssl_cert():
                 ).serial_number(
                     x509.random_serial_number()
                 ).not_valid_before(
-                    datetime.datetime.utcnow()
+                    now
                 ).not_valid_after(
-                    datetime.datetime.utcnow() + datetime.timedelta(days=365)
+                    now + datetime.timedelta(days=365)
                 ).add_extension(
                     x509.SubjectAlternativeName([
                         x509.DNSName("localhost"),
@@ -259,7 +262,7 @@ def generate_ssl_cert():
                     critical=False,
                 ).sign(private_key, hashes.SHA256())
                 
-                # 写入证书文件
+                # 写入私钥文件
                 with open(key_path, "wb") as f:
                     f.write(private_key.private_bytes(
                         encoding=serialization.Encoding.PEM,
@@ -267,8 +270,9 @@ def generate_ssl_cert():
                         encryption_algorithm=serialization.NoEncryption()
                     ))
                 
+                # 写入证书文件 - 修复serialize方法调用
                 with open(cert_path, "wb") as f:
-                    f.write(cert.serialize())
+                    f.write(cert.public_bytes(encoding=serialization.Encoding.PEM))
                 
                 print(f"[SSL] Generated self-signed cert via cryptography lib: {cert_path}, {key_path}")
                 
