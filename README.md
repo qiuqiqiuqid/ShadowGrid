@@ -2,257 +2,230 @@
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org)
+[![Remote Control](https://img.shields.io/badge/status-beta-green)](https://img.shields.io/badge/status-beta-green)
 
-一个轻量级、安全的远程控制系统，用于合法授权的远程管理与运维监控。
+一个轻量级、安全的远程控制系统，用于合法授权的远程管理与运维监控。  
+让您的远程管理工作变得 "不那么可怕" —— 至少比敲黑乎乎的终端要友好一点 😎
 
-> ⚠️ **法律声明**: 本项目仅供合法授权的本地网络管理使用。未经明确授权，请勿将本项目用于任何非法用途。开发者不承担因 misuse 造成的任何责任。
+> ⚠️ **法律声明**: 本项目仅供合法授权的本地网络管理使用。请勿将其用于非法目的（我们不想上新闻）。开发者不对滥用行为负责。
 
-## 🚀 快速开始
+## 🚀 简介：这是什么？
 
-### prerequisite
+大家好，我是一个名叫 ShadowGrid 的"小管家"。顾名思义，我就像一个暗影矩阵——低调地潜伏在后台，默默帮你管理那些"远方的朋友"。无论你是想偷偷看看同事的桌面（开玩笑的），还是需要管理分布在各地的服务器，我都乐意效劳。
 
-- Python 3.7+
-- Windows/Linux/macOS
+想象一下：你在办公室，却能操作千里之外的电脑，就像拥有"超能力"一样。但请注意，这不是魔法（遗憾的是），而是技术的力量。
 
-### 1. 安装依赖
+## 🎯 新功能亮点
 
+### 进程管理 (`ps`, `kill`)
+- 想知道远程机器正在跑哪些程序？`ps` 命令帮你看一遍
+- 某个程序跑飞了拖慢系统？`kill` 命令让它说拜拜
+- 像在本地操作一样流畅，再也不用担心远程卡死的问题
+
+### 系统持久化 (`persist`)
+- 客户端不再是个"随用随走"的过客
+- 通过 `persist` 命令，它可以成为系统不可或缺的一部分
+- 系统每次启动都会自动召唤它（只要您允许的话）
+
+## 🔧 已有功能保持不变
+
+| 功能 | 描述 | 使用场景 |
+|------|------|----------|
+| 🔒 加密通信 | HTTPS + WebSocket Secure (WSS) | 保证数据传输安全 |
+| 💻 命令执行 | 远程执行 Shell 命令 | 各种系统管理操作 |
+| 📁 文件管理 | 上传/下载/删除/移动/查找文件 | 文件资料传输 |
+| 📸 屏幕截图 | 远程桌面实时截图 | 可视化远程诊断 |
+| 📂 目录浏览 | 浏览远程文件系统 | 云端文件管理器替代 |
+
+## 📋 使用方法（更轻松的方式）
+
+### 安装依赖
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. 启动服务端
+> 小贴士：如果遇到依赖安装问题，试试用虚拟环境，别让你的系统环境变成"一锅粥"
 
+### 启动服务端
 ```bash
 python server.py --admin-password your_password
 ```
 
-服务端将监听端口 **8444** (HTTPS/WSS)，首次运行会自动生成 SSL 证书。
+服务器会在8444端口（默认）静静等待连接。如果第一次运行，它还会生成一堆看起来很厉害的安全证书。
 
-### 3. 启动客户端
-
+### 启动客户端
 ```bash
 python client.py
 ```
 
-或直接运行打包的可执行文件：
-
+或者使用打包版本直接运行（就像便携软件）：
 ```bash
-shadowgrid-agent.exe
+shadowgrid-agent.exe # Windows 系统
 ```
 
-### 4. 启动管理终端
-
+### 启动管理台
 ```bash
 python admin.py
 ```
 
-按提示输入服务器地址和密码即可开始管理。
+输入服务器地址和密码，就开始您的指挥艺术。建议穿着深色衬衫以增加"黑客感"，不过这完全是自愿的 😄
 
-## 📋 功能特性
+## 👨‍💻 操作示例 - 让我们玩起来！
 
-| 功能 | 描述 |
-|------|------|
-| 🔒 加密通信 | HTTPS + WebSocket Secure (WSS) |
-| 💻 命令执行 | 远程执行 Shell 命令 |
-| 📁 文件管理 | 上传/下载/删除/移动/查找文件 |
-| 📸 屏幕截图 | 远程桌面实时截图 |
-| 📂 目录浏览 | 浏览远程文件系统 |
-
-## 📖 命令列表
-
-### 客户端支持的命令
-
-| 命令 | 参数 | 描述 |
-|------|------|------|
-| `ls` | `[路径]` | 列出目录内容 |
-| `cd` | `<路径>` | 切换当前目录 |
-| `pwd` | 无 | 显示当前工作目录 |
-| `cat` | `<文件>` | 显示文件内容 |
-| `dl` | `<文件> [目录]` | 下载文件到本地 |
-| `ud` | `<文件> [目录]` | 上传文件到远程 |
-| `rm` | `<路径> [-r]` | 删除文件或目录 |
-| `mv` | `<源> <目标>` | 移动或重命名 |
-| `file` | `<路径>` | 查看文件类型 |
-| `find` | `<模式> [-t 类型]` | 查找文件 |
-| `shell` | `<命令>` | 执行系统命令 |
-| `screenshot` | 无 | 截取远程屏幕 |
-
-### 使用示例
-
+### 基本操作
 ```bash
-# 列出目录
+# 看看远程目录里有什么宝贝（不建议搜寻隐私文件哦！）
 ls
-ls C:\Users\Public
+ls C:\Windows\System32  # 这个目录可能有点吓人
 
-# 切换目录
+# 优雅地更换当前目录
 cd Documents
 
-# 查看文件内容
-cat config.txt
+# 查看文件内容，就像在咖啡馆翻书一样轻松
+cat readme.txt
+```
 
-# 下载文件
-dl report.pdf
-dl report.pdf C:\Downloads
+### 新增的进程管理功能
+```bash
+# 查看所有正在运行的进程
+ps
+process    # 同样的命令，换汤不换药
 
-# 上传文件
+# 发现了一个捣蛋的进程？果断干掉它
+kill 1234  # 1234是进程ID，别错杀无辜（比如系统进程）
+terminate 1234  # kill 命令的另一个别名
+```
+
+### 持久化管理
+```bash
+# 让客户端开机自动启动，真正"扎根"在系统里
+persist install
+install auto  # 等效命令
+
+# 改变注意要删除持久化设置？
+persist remove
+```
+
+### 文件操作（生活必备技能）
+```bash
+# 把远程文件搬到本地
+dl important_document.pdf
+dl secret_recipe.docx ~/Downloads
+
+# 把本地文件送过去（搬家小能手）
 ud backup.zip
-ud backup.zip /tmp
+ud photo.jpg /home/user/shared
+```
 
-# 删除文件
-rm temp.txt
-rm old_project -r
-
-# 移动/重命名
-mv old.txt new.txt
+### 更多高级操作
+```bash
+# 移动/重命名文件（重命名的艺术）
+mv old_file.txt new_file.txt
 mv file.txt C:\backup
 
-# 查看文件类型
-file document.pdf
-
-# 查找文件
+# 查找文件（寻宝游戏）
 find *.log
-find secret* -t f
-find tmp -t d
+find secret* -t f    # 找文件
+find tmp -t d        # 找目录
 
-# 截图
+# 当然还有截图（偷窥...额，查看功能）
 screenshot
 ```
 
-## ⚙️ 配置说明
+> 隐藏彩蛋：如果你发现系统中有可疑进程，`ps` 命令可以帮助你找出真相。不过请注意：请勿随意杀死系统进程，否则后果自负。别拿菜刀切手指还怪刀子锋利。
 
-### 端口配置
+## ⚙️ 配置技巧 - 成为我们的一份子
 
-所有组件统一使用 **8444** 端口：
+所有组件都在8444端口和谐共处：
+- 服务端: `https://your-server:8444`
+- WebSocket: `wss://your-server:8444/ws` - 这是"悄悄话专线"
+- 管理端：连接同上 - 不喜欢热闹的高并发
 
-- **服务端**: `https://your-server:8444`
-- **WebSocket**: `wss://your-server:8444/ws`
-- **管理端**: 连接 `https://your-server:8444`
+> 如需改端口（比如8444已经被某程序霸占），请编辑 `server.py` 和 `client.py` 中的 `SERVER_PORT` 变量。不过请记住，8444 是官方黄金端口号，选它总没错。
 
-如需修改端口，请编辑 `server.py` 和 `client.py` 中的 `SERVER_PORT` 变量。
+## 🔐 安全秘籍 - 保护你爱的人
 
-### SSL/TLS 证书
+### 给管理员的重要提醒
+1. **通信加密** - 所有流量穿了"隐身衣"（HTTPS/WSS）
+2. **密码强度** - 建议用 "自行车密码破解难度" 的密码，如 `MyP@ssw0rd!2026$ecure`
+3. **合法使用** - 仅用于合法授权的网络管理，不要尝试挑战法律底线
+4. **常规升级** - 定期换密码和证书，就像定期洗澡一样重要
 
-程序会自动生成自签名证书（首次运行时）：
-
+### 防火墙配置（让"外星人"进来）
 ```bash
-python server.py --admin-password your_password
-```
-
-如需手动生成：
-
-```bash
-openssl genrsa -out key.pem 2048
-openssl req -new -x509 -key key.pem -out cert.pem -days 365
-```
-
-## 📁 项目结构
-
-```
-ShadowGrid/
-├── server.py          # FastAPI 服务端 (HTTPS/WSS)
-├── client.py          # WebSocket 客户端
-├── admin.py           # 命令行管理终端
-├── requirements.txt   # Python 依赖
-├── shadowgrid-agent.spec  # PyInstaller 打包配置
-├── templates/         # Web 模板
-│   ├── index.html
-│   └── login.html
-├── build/             # 构建临时文件
-├── dist/              # 打包输出
-│   └── shadowgrid-agent.exe
-└── screenshots/       # 截图保存目录
-```
-
-## 🔐 安全指南
-
-### ⚠️ 重要安全建议
-
-1. **加密通信** - 所有通信使用 HTTPS/WSS 加密
-2. **强密码** - 使用至少 12 位复杂密码
-3. **内网使用** - 仅在授权的内部网络中使用
-4. **定期更新** - 定期更换密码和证书
-5. **合法授权** - 仅用于合法授权的远程管理
-
-### 防火墙配置
-
-确保端口 8444 在防火墙中开放：
-
-```bash
-# Windows
+# Windows - 永远不要关闭安全意识
 netsh advfirewall firewall add rule name="ShadowGrid" dir=in action=allow protocol=TCP localport=8444
 
-# Linux
+# Linux - 简单粗暴
 ufw allow 8444/tcp
 ```
 
-## 📚 相关文档
+## 📁 架构解析 - 慕课时刻
 
-- [COMMANDS.md](./COMMANDS.md) - 详细命令文档
-- [SERVER_API.md](./SERVER_API.md) - 服务端 HTTP API 参考
-- [CLIENT_PROTOCOL.md](./CLIENT_PROTOCOL.md) - 客户端 WebSocket 协议规范
-- [DEVELOPMENT.md](./DEVELOPMENT.md) - 开发文档索引
-
-## 🏗️ 技术架构
+这里有一个简单易懂的数据流向图：
 
 ```
 ┌─────────────────┐
-│   Admin Terminal│
-│   (admin.py)    │
-└────────┬────────┘
-         │ HTTPS
+│   管理员       │    ← 你（人类）
+│   (admin.py)    │    
+└────────┬────────┘        警告：只对你信任的服务器执行操作
+         │ HTTPS                （不然后果自负）    
          ▼
 ┌─────────────────┐
-│   Server API    │
-│   (server.py)   │
-│   Port: 8444    │
-└────────┬────────┘
-         │ WSS
+│   服务器        │    ← 控制中心（机器人）
+│   (server.py)   │        
+│   8444端口     │         通过WSS与代理聊天
+└────────┬────────┘              
+         │ WSS                  (WebSocket Security)         
          ▼
 ┌─────────────────┐
-│  Client Agent   │
-│  (client.py)    │
-│/shadowgrid-agent│
-└─────────────────┘
+│  客户端代理     │    ← 目标机器上的卧底
+│  (client.py)    │    
+│/shadowgrid-agent│         随叫随到的小助手
+└─────────────────┘            （希望它不要太听话）
 ```
 
-### 通信流程
+> 注：整个过程就像打电话一样自然，只不过所有对话都加密了。客户端启动后会主动联系服务器报到，然后安安静静等待您的指令。感觉像个乖巧的"数字宠物"，是不是？
 
-1. 客户端启动后通过 WebSocket 连接到服务端
-2. 客户端发送注册消息 (client_id, hostname, unique_id)
-3. 管理终端通过 HTTP API 发送命令到服务端
-4. 服务端通过 WebSocket 将命令转发给客户端
-5. 客户端执行命令并返回结果
-6. 服务端将结果存储，管理终端可查询
+## 🏗️ 技术栈 - Geek时间
 
-## 📦 打包客户端
+- FastAPI (用于服务端) - 快如闪电的现代化框架
+- WebSocket - 实时双向通信的小精灵
+- Python - 全栈主力（没有它搞不定的事）
+- SSL/TLS - 专业加密团队护航
+- psutil - 进程管理界的瑞士军刀
 
-使用 PyInstaller 打包客户端：
+## 📦 打包发布 - 让它独自旅行
+
+要用PyInstaller把客户端打包成独立程序（这样就不用到处安装Python了）：
 
 ```bash
 pyinstaller shadowgrid-agent.spec
 ```
 
-打包后的可执行文件位于 `dist/shadowgrid-agent.exe`
+打包好的文件在 `dist/shadowgrid-agent.exe`，把它放到任意地方运行。就像把一个微型管理员塞进一个文件里。
 
-## 🤝 贡献
+## 🎯 未来规划：下一步要做什么
 
-欢迎提交 Issue 和 Pull Request！
+- [x] 进程管理（已完成！）  
+- [x] 持久化安装（已完成！）  
+- [ ] 图形化界面（可能需要聘请UI设计师）  
+- [ ] 多语言支持（中文、English等）  
+- [ ] 插件系统（允许社区贡献功能）  
+- [ ] 消息推送（类似微信通知的功能）  
+- [ ] 自愈特性（即使网络中断也能自我恢复）
 
-### 开发路线图
+## 🤝 贡献代码 - 一起来造火箭
 
-- [ ] 多语言支持 (i18n)
-- [ ] 插件系统
-- [ ] Web 管理界面
-- [ ] 批量命令执行
-- [ ] 命令历史记录
-- [ ] 会话管理
+欢迎提交Issue和PR，让我们一起把它做得更好！  
+不过请记住：代码即友谊，测试见真情。
 
-## 📄 许可证
+## 📜 许可证
 
-本项目采用 [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0) 许可证。
+本项目采用 [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0) 许可。简单来说，你可以自由修改和使用这个项目，但如果你分发修改版，也必须保持开源。
 
 ```
-ShadowGrid - An open-source remote administration tool
+ShadowGrid - An open-source remote administration tool for legitimate uses
 Copyright (C) 2026  帅丘
 
 This program is free software: you can redistribute it and/or modify
@@ -269,14 +242,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ```
 
-## 📧 联系作者
+## 📞 支持
 
-如有问题或建议，请通过 GitHub Issues 联系。
+如果这个项目帮到了您，或者您遇到什么问题，可以：
+- 提交GitHub Issues（最推荐）
+- Fork后自己玩耍
+- 点个star以表示赞赏（免费又有效）
 
 ---
 
 <div align="center">
 
-** please use this tool only for legal and authorized purposes**
+**请务必只用于合法授权的目的，文明使用这个小工具**
+
+_"代码改变世界，但前提是你用得对"_ © 2026
 
 </div>
