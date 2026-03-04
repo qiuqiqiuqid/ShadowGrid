@@ -4,3 +4,4 @@ websocket-client
 Pillow
 requests
 PyOpenSSL
+psutil
