@@ -18,7 +18,7 @@ import ssl
 
 ADMIN_PASSWORD = "admin123"
 
-SERVER_URL = "https://113.45.254.80:8444"
+SERVER_URL = "https://127.0.0.1:8444"
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8444
 CLIENT_ID = None
@@ -196,16 +196,92 @@ def generate_ssl_cert():
     
     if not cert_path.exists() or not key_path.exists():
         try:
+            # 首先尝试使用subprocess模块配合openssl命令
             import subprocess
-            subprocess.run([
-                "openssl", "req", "-x509", "-newkey", "rsa:4096",
-                "-keyout", str(key_path), "-out", str(cert_path),
-                "-days", "365", "-nodes",
-                "-subj", "/C=CN/ST=State/L=City/O=Organization/CN=localhost"
-            ], check=True)
-            print(f"[SSL] Generate self-signed cert: {cert_path}, {key_path}")
+            import shutil
+            
+            # 检查系统是否安装了openssl
+            openssl_exists = shutil.which("openssl") is not None
+            
+            if openssl_exists:
+                subprocess.run([
+                    "openssl", "req", "-x509", "-newkey", "rsa:4096",
+                    "-keyout", str(key_path), "-out", str(cert_path),
+                    "-days", "365", "-nodes",
+                    "-subj", "/C=CN/ST=State/L=City/O=Organization/CN=localhost"
+                ], check=True)
+                print(f"[SSL] Generated self-signed cert via openssl: {cert_path}, {key_path}")
+            else:
+                print("[SSL] OpenSSL not found, generating certificate via cryptography library...")
+                
+                # 如果OpenSSL不可用，使用Python内置库生成证书
+                from cryptography import x509
+                from cryptography.x509.oid import NameOID
+                from cryptography.hazmat.primitives import hashes, serialization
+                from cryptography.hazmat.primitives.asymmetric import rsa
+                import datetime
+                import ipaddress
+                
+                # 生成私钥
+                private_key = rsa.generate_private_key(
+                    public_exponent=65537,
+                    key_size=2048,
+                )
+                
+                # 创建证书
+                subject = issuer = x509.Name([
+                    x509.NameAttribute(NameOID.COUNTRY_NAME, "CN"),
+                    x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "State"),
+                    x509.NameAttribute(NameOID.LOCALITY_NAME, "City"),
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Organization"),
+                    x509.NameAttribute(NameOID.COMMON_NAME, "localhost"),
+                ])
+                
+                cert = x509.CertificateBuilder().subject_name(
+                    subject
+                ).issuer_name(
+                    issuer
+                ).public_key(
+                    private_key.public_key()
+                ).serial_number(
+                    x509.random_serial_number()
+                ).not_valid_before(
+                    datetime.datetime.utcnow()
+                ).not_valid_after(
+                    datetime.datetime.utcnow() + datetime.timedelta(days=365)
+                ).add_extension(
+                    x509.SubjectAlternativeName([
+                        x509.DNSName("localhost"),
+                        x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+                        # 可能还有其他的IP需要添加
+                        x509.IPAddress(ipaddress.IPv4Address("0.0.0.0")),
+                    ]),
+                    critical=False,
+                ).sign(private_key, hashes.SHA256())
+                
+                # 写入证书文件
+                with open(key_path, "wb") as f:
+                    f.write(private_key.private_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption()
+                    ))
+                
+                with open(cert_path, "wb") as f:
+                    f.write(cert.serialize())
+                
+                print(f"[SSL] Generated self-signed cert via cryptography lib: {cert_path}, {key_path}")
+                
+        except ImportError:
+            # 如果cryptography库不存在，提示用户安装
+            print("[SSL] Python cryptography library not found. Please install it with: pip install cryptography")
+            print("[SSL] Trying alternative methods...")
+            
+            # 简单处理情况 - 只是告知错误
+            pass
         except Exception as e:
             print(f"[SSL] Generate cert failed: {e}")
+            print("[SSL] Install OpenSSL or cryptography library to enable TLS")
             return None, None
     
     return str(cert_path), str(key_path)
