@@ -64,6 +64,9 @@ WS = get_websocket_url(SVR)
 
 CLIENT_HOSTNAME = os.environ.get("CLIENT_HOSTNAME") or CLIENT_HOSTNAME
 
+# 获取或生成客户端ID
+CID = os.environ.get("CLIENT_ID", "unknown")  # 暂时使用未知ID，将在main函数中设置
+
 print(f"[Client] Server URL: {SVR}")
 print(f"[Client] WebSocket URL: {WS}")
 print(f"[Client] Hostname: {CLIENT_HOSTNAME or get_hostname()}")
@@ -78,6 +81,10 @@ def get_id():
     try: ID_FILE.write_text(uid)
     except: pass
     return uid
+
+# 获取或生成客户端ID
+CID = os.environ.get("CLIENT_ID") or get_id()
+print(f"[Client] Client ID: {CID}")
 
 CID = os.environ.get("CLIENT_ID") or get_id()
 print(f"[Client] Client ID: {CID}")
@@ -480,17 +487,28 @@ def on_open(ws):
         print(f"[Client] Registration error: {e}")
 
 def main():
+    global CID  # 确保使用全局CID变量
+    
+    # 获取或生成客户端ID
+    CID = os.environ.get("CLIENT_ID") or get_id()
+    print(f"[Client] Client ID: {CID}")
+    
     print(f"[Client] Starting WebSocket...")
+    
+    ws_url = WS + CID  # 确保完整连接地址格式正确
+    print(f"[Client] Connecting to {ws_url}...")
+    
     ws = websocket.WebSocketApp(
-        WS + CID,
+        ws_url,
         on_open=on_open,
         on_message=on_msg,
         on_error=on_error,
         on_close=on_close,
     )
+    
     while True:
         try:
-            print(f"[Client] Connecting to {WS + CID}...")
+            print(f"[Client] Attempting connection to {ws_url}...")
             ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
         except Exception as e:
             print(f"[Client] Run error: {e}")
