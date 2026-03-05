@@ -35,22 +35,34 @@ try:
 except ImportError:
     psutil = None
 
-SERVER_URL = "113.45.254.80:8444"
+SERVER_URL = "https://127.0.0.1:8444"
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8444
 CLIENT_ID = None
 CLIENT_HOSTNAME = None
-
-SVR = os.environ.get("SERVER_URL", SERVER_URL)
-WS = SVR.replace("https://", "wss://").replace("http://", "ws://") + "/ws/"
-
-CLIENT_HOSTNAME = os.environ.get("CLIENT_HOSTNAME") or CLIENT_HOSTNAME
 
 def get_hostname():
     try:
         return socket.getfqdn()
     except:
         return "unknown"
+
+def get_websocket_url(svru):
+    """构建WebSocket URL"""
+    if svru:
+        # 处理不同格式的服务器URL
+        original = svru
+        wss_url = svru.replace("https://", "wss://").replace("http://", "ws://")
+        if not wss_url.startswith(("wss://", "ws://")):
+            # 如果URL沒有協議前缀，則添加
+            wss_url = f"wss://{wss_url.replace('http://', '').replace('https://', '')}"
+        return f"{wss_url.rstrip('/')}/ws"
+    return f"wss://127.0.0.1:8444/ws"
+
+SVR = os.environ.get("SERVER_URL", SERVER_URL)
+WS = get_websocket_url(SVR)
+
+CLIENT_HOSTNAME = os.environ.get("CLIENT_HOSTNAME") or CLIENT_HOSTNAME
 
 print(f"[Client] Server URL: {SVR}")
 print(f"[Client] WebSocket URL: {WS}")
