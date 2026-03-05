@@ -51,24 +51,21 @@ def get_websocket_url(svru):
     """构建WebSocket URL"""
     if svru:
         # 处理不同格式的服务器URL
-        original = svru
         wss_url = svru.replace("https://", "wss://").replace("http://", "ws://")
         if not wss_url.startswith(("wss://", "ws://")):
             # 如果URL沒有協議前缀，則添加
             wss_url = f"wss://{wss_url.replace('http://', '').replace('https://', '')}"
-        return f"{wss_url.rstrip('/')}/ws"
-    return f"wss://127.0.0.1:8444/ws"
+        return f"{wss_url.rstrip('/')}/ws/"  # 确保路径以 /ws/ 结尾而不附加客户端ID
+    return f"wss://127.0.0.1:8444/ws/"
 
 SVR = os.environ.get("SERVER_URL", SERVER_URL)
 WS = get_websocket_url(SVR)
 
 CLIENT_HOSTNAME = os.environ.get("CLIENT_HOSTNAME") or CLIENT_HOSTNAME
 
-# 获取或生成客户端ID
-CID = os.environ.get("CLIENT_ID", "unknown")  # 暂时使用未知ID，将在main函数中设置
-
+# 打印信息时暂时没有ID，因为WS需要在main函数中才能完整确定
 print(f"[Client] Server URL: {SVR}")
-print(f"[Client] WebSocket URL: {WS}")
+print(f"[Client] WebSocket URL (template): {WS}<client_id>")
 print(f"[Client] Hostname: {CLIENT_HOSTNAME or get_hostname()}")
 
 ID_FILE = Path.home() / ".srt_id"
@@ -489,11 +486,13 @@ def on_open(ws):
 def main():
     global CID  # 确保使用全局CID变量
     
+    print(f"[Client] Starting WebSocket...")
+    
     # 获取或生成客户端ID
     CID = os.environ.get("CLIENT_ID") or get_id()
-    print(f"[Client] Client ID: {CID}")
+    current_hostname = CLIENT_HOSTNAME or get_hostname()
     
-    print(f"[Client] Starting WebSocket...")
+    print(f"[Client] Client ID: {CID} ({current_hostname})")
     
     ws_url = WS + CID  # 确保完整连接地址格式正确
     print(f"[Client] Connecting to {ws_url}...")
