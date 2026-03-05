@@ -35,7 +35,7 @@ try:
 except ImportError:
     psutil = None
 
-SERVER_URL = "https://127.0.0.1:8444"
+SERVER_URL = "113.45.254.80:8444"
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8444
 CLIENT_ID = None

