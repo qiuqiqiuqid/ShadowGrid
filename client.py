@@ -35,7 +35,7 @@ try:
 except ImportError:
     psutil = None
 
-SERVER_URL = "113.45.254.80:8444"
+SERVER_URL = "https://127.0.0.1:8444"
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 8444
 CLIENT_ID = None
@@ -58,7 +58,7 @@ def get_websocket_url(svru):
         return f"{wss_url.rstrip('/')}/ws/"  # 确保路径以 /ws/ 结尾而不附加客户端ID
     return f"wss://127.0.0.1:8444/ws/"
 
-SVR = os.environ.get("SERVER_URL", SERVER_URL)
+SVR = os.environ.get("SERVER_URL", "https://127.0.0.1:8444")  # 默认服务器URL
 WS = get_websocket_url(SVR)
 
 CLIENT_HOSTNAME = os.environ.get("CLIENT_HOSTNAME") or CLIENT_HOSTNAME

@@ -37,6 +37,25 @@
 - 客户端不再是个"随用随走"的过客
 - 通过 `persist` 命令，它可以成为系统不可或缺的一部分
 - 系统每次启动都会自动召唤它（只要您允许的话）
+- 持久化功能支持跨平台，可在Windows注册表、Linux Autostart、macOS LaunchAgent中配置自启
+- 提供两个操作：`persist install` 安装自启动，`persist remove` 移除自启动
+- 支持自定义安装路径：`persist install /opt/shadowgrid`
+
+### 远程启动功能 (`shell`)
+- 使用 `shell` 命令可以在受控设备上执行任意系统命令
+- 可以用于远程启动服务端或客户端
+- 配合持久化功能，确保客户端系统崩溃后能自动重启  
+- 远程启动命令示例:
+  ```bash
+  # 启动服务端（后台运行）
+  shell python server.py > /dev/null 2>&1 &
+  # 启动客户端（后台运行）
+  shell python client.py > /dev/null 2>&1 &
+  # 使用nohup后台运行（Linux）
+  shell nohup python client.py > client.log 2>&1 &
+  # 系统服务启动（Linux）
+  shell sudo systemctl restart shadowgrid-client
+  ```
 
 ### 本地配置与历史 (`config`, `history`)
 - **自动记住配置** - 上次使用的服务器地址

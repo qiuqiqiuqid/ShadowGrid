@@ -47,7 +47,7 @@ ShadowGrid 提供三种使用方式：
 | `process` | 无 | 同 ps 命令 |
 | `kill <PID>` | 进程ID | 结束进程 |
 | `terminate <PID>` | 进程ID | 同 kill 命令 |
-| `persist install` | [路径] | 在系统中持久化客户端 |
+| `persist install` | [路径] | 在系统中安装持久化启动项，支持跨平台自启动配置 |
 | `persist remove` | 无 | 移除持久化设置 |
 | `install auto` | 无 | 等同 persist install |
 | `shell <命令>` | Shell 命令 | 执行系统命令 |
@@ -56,6 +56,22 @@ ShadowGrid 提供三种使用方式：
 | `time` | 无 | 获取远程时间 |
 | `test` | 无 | 测试连接 |
 | `back` | 无 | 返回设备列表 |
+
+#### 持久化管理详细说明:
+
+1. **系统持久化 (persist)**: 通过 `persist install` 命令安装系统自启动，在系统重启后自动启动ShadowGrid客户端。
+   - **Windows**: 将注册表启动项或Startup文件夹
+   - **Linux**: 创建 `~/.config/autostart/`桌面启动项
+   - **macOS**: 配置LaunchAgent
+
+2. **远程启动命令 (shell)**: 使用 `shell` 命令可以远程启动各种程序或服务，例如重启客户端程序：
+   ```bash
+   # 后台运行客户端
+   shell nohup python client.py > /tmp/shadowgrid.log 2>&1 &
+   
+   # 配合持久化使用：确保客户端崩溃后重启
+   shell pgrep -f client.py || python client.py &
+   ```
 
 ### 交互示例
 

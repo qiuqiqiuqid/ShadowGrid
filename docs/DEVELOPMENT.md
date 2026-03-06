@@ -37,22 +37,33 @@
 - 命令格式: `{"type": "ps"}` 或 `{"type": "process"}`
 - 客户端: 实现 `kill` 命令终止指定进程
 - 命令格式: `{"type": "kill", "payload": {"pid": 1234}}`
+- 实现基础: 使用 `psutil` 库获取进程信息和执行进程管理操作
 
 ### 2. 系统持久化 (persist 命令)
 - 客户端: 实现 `persist` 命令系统自启
 - 命令格式: `{"type": "persist", "payload": {"action": "install", "path": "[opt_path]}"}`
+- 实现要点: 
+  - Windows: 配置注册表自启动项或添加到Startup文件夹 
+  - Linux/macOS: 配置autostart desktop文件或LaunchAgent
+  - 需要有系统相应权限来实现自启动配置
 
-### 3. 本地配置系统 (Config)
+### 3. 远程启动机制 (shell 命令)
+- 客户端: 通过shell命令提供远程执行任意系统命令的能力
+- 命令格式: `{"type": "shell", "payload": "command_to_run"}`
+- 典合用途: 远程启动服务端/客户端、自动重启进程等
+- 安全注意: 需要注意命令注入安全风险，仅在安全可控环境下使用
+
+### 4. 本地配置系统 (Config)
 - 配置文件位置: `~/.shadowgrid/config.ini`
 - 配置项: `server_url`, `last_password`, `last_client_id`, `auto_remember_password`
 - 实现登录记忆、自动连接等便利功能
 
-### 4. 命令历史和智能补全
+### 5. 命令历史和智能补全
 - 管理端: 实现 readline 接口支持
 - 命令历史: 支持方向键浏览
 - 智能补全: `compgen <partial_cmd>` 实现命令补全
 
-### 5. 后台静默运行
+### 6. 后台静默运行
 - 客户端: 实现静默运行选项
 - 编译参数: 使用 `--windowed` 或 `console=False`
 - 用于长期部署，无需显式控制台窗口
