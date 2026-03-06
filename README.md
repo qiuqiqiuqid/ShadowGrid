@@ -329,3 +329,37 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 _"代码改变世界，但前提是你用得对"_ © 2026
 
 </div>
+
+## 目录结构
+
+```
+ShadowGrid/
+├── server.py          # FastAPI 服务端
+├── client.py          # Python 客户端
+├── admin.py           # Python 管理终端
+├── requirements.txt   # Python 依赖
+├── docs/              # 文档目录
+│   ├── README.md
+│   ├── COMMANDS.md
+│   ├── SERVER_API.md
+│   ├── CLIENT_PROTOCOL.md
+│   ├── DEVELOPMENT.md
+│   ├── COMPILE.md
+│   └── CHANGELOG.md
+├── build-tools/       # 构建工具目录
+│   ├── admin_minimal.spec
+│   ├── client_background.spec
+│   ├── client_minimal.spec
+│   ├── server_minimal.spec
+│   ├── compile_background.py
+│   └── compile_client.py  
+├── templates/         # Web 模板
+│   ├── index.html
+│   └── login.html
+├── screenshots/       # 截图文件夹
+└── certs/             # 证书文件
+    ├── cert.pem
+    └── key.pem
+```
+
+现在文档和编译工具都有组织良好的分离结构，便于维护。
