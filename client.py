@@ -278,45 +278,7 @@ def handle(cmd):
         except Exception as e:
             return {"status":"error","result":str(e),"result_type":"error"}
 
-    elif t == "file":
-        try:
-            path = p.get("path")
-            if not path:
-                return {"status":"error","result":"Path required","result_type":"error"}
-            full_path = os.path.join(current_dir, path) if not os.path.isabs(path) else path
-            if not is_safe_path(current_dir, full_path):
-                return {"status":"error","result":"Invalid path","result_type":"error"}
-            full_path = os.path.abspath(full_path)
-            if not os.path.exists(full_path):
-                return {"status":"error","result":"Path not found","result_type":"error"}
-            file_type = "unknown"
-            if os.path.isfile(full_path):
-                ext = os.path.splitext(full_path)[1].lower()
-                if ext in ['.txt', '.md', '.csv', '.json', '.xml', '.ini', '.log']:
-                    file_type = "text"
-                elif ext in ['.exe', '.bat', '.cmd', '.sh', '.bin', '.dll', '.so', '.dylib']:
-                    file_type = "executable"
-                elif ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.ico']:
-                    file_type = "image"
-                elif ext in ['.pdf']:
-                    file_type = "pdf"
-                elif ext in ['.mp3', '.wav', '.flac', '.aac']:
-                    file_type = "audio"
-                elif ext in ['.mp4', '.avi', '.mkv', '.mov']:
-                    file_type = "video"
-                elif ext in ['.zip', '.tar', '.gz', '.7z', '.rar']:
-                    file_type = "archive"
-                else:
-                    file_type = "file"
-            elif os.path.isdir(full_path):
-                file_type = "directory"
-            elif os.path.islink(full_path):
-                file_type = "shortcut"
-            return {"status":"ok","result":file_type,"result_type":"file"}
-        except Exception as e:
-            return {"status":"error","result":str(e),"result_type":"error"}
-
-    if t == "stat":
+    elif t == "stat":
         """获取文件状态信息,主要用于获取文件大小"""
         try:
             path = p.get("path")
