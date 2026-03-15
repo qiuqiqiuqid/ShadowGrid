@@ -916,7 +916,6 @@ def interaction_loop(client_id, hostname):
     
     while True:
         try:
-            print(RESET, end="")  # Reset colors before prompt
             prompt = f"{BLUE}┌──({LGREEN}{remote_user}{RESET}@{PURPLE}{remote_hostname}{RESET})-[{CYAN}{CURRENT_PATH}{RESET}]{RESET}\n{BLUE}└─# {LGREEN}>{RESET} "
             cmd_input = input(prompt).strip()
         except EOFError:
