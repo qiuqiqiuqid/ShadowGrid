@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org)
 [![Remote Control](https://img.shields.io/badge/status-stable-green)](https://img.shields.io/badge/status-stable-green)
-[![Version](https://img.shields.io/badge/version-v1.1.0-brightgreen.svg)](https://github.com/qiuqiqiuqid/ShadowGrid/releases)
+[![Version](https://img.shields.io/badge/version-v1.1.1-brightgreen.svg)](https://github.com/qiuqiqiuqid/ShadowGrid/releases)
 
 一个轻量级、安全的远程控制系统，用于合法授权的远程管理与运维监控。  
 让您的远程管理工作变得 "不那么可怕" —— 至少比敲黑乎乎的终端要友好一点 😎
@@ -20,23 +20,28 @@
 
 想象一下：你在办公室，却能操作千里之外的电脑，就像拥有"超能力"一样。但请注意，这不是魔法（遗憾的是），而是技术的力量。
 
-## ⭐ 版本信息 v1.1.0
+## ⭐ 版本信息 v1.1.1
 
-最新版本：**v1.1.0** (2026-03-15)
+最新版本：**v1.1.1** (2026-03-15)
 
-### V1.1.0 重要更新
+### V1.1.1 重要更新
 - **新功能扩展**：
   - 新增MV（移动）、UD（上传）、CP（复制）、RM（删除）文件操作命令
   - 新增CD（切换目录）、PWD（显示当前路径）、TERMINATE（终止进程）命令
-  - 新增完整命令状态验证机制，解决"虚拟下线"问题
+  - 新增客户端状态验证机制，解决虚假掉线问题
 
 - **系统改进**：
   - 改进客户端-服务端通信机制，修复模块变量访问冲突
-  - 优化掉线检测算法，解决虚假掉线问题
+  - 优化掉线检测算法，提升连接稳定性
+  - 优化find命令实现，修复潜在异常
   - 改进错误处理和用户反馈体验
+
+- **功能调整**：
+  - 移除冗余的file命令以简化功能集
 
 - **稳定性修复**：
   - 修复多种模块访问错误 (os/base64/shutil)
+  - 修复文件搜索功能中None值处理逻辑错误
   - 修复作用域冲突和语法错误
   - 完善所有功能实现与文档一致性
 

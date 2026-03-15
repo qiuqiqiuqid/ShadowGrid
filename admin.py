@@ -722,35 +722,7 @@ def interaction_loop(client_id, hostname):
                     else:
                         print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
                 except Exception as e:
-                    print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
-                return
-        elif cmd == "file":
-            if not arg:
-                print(f"{RED}[错误]{RESET} 用法: file <路径>")
-                continue
-            full_path = os.path.normpath(os.path.join(CURRENT_PATH, arg))
-            send_command(client_id, "file", {"path": full_path})
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    if r.get("result_type") == "file":
-                        print(f"{PURPLE}[结果]{RESET} {r.get('result', '')}")
-                    else:
-                        print_failed_result(r)
-            else:
-                # 检测到客户端下线
-                print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
-                CURRENT_DEVICE = None
-                CURRENT_HOSTNAME = ""
-                print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
-                try:
-                    fetch_clients()
-                    if CLIENTS:
-                        print_clients()
-                    else:
-                        print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
-                except Exception as e:
-                    print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
+                     print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
                 return
         elif cmd == "find":
             if not arg:

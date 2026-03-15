@@ -41,9 +41,10 @@ ShadowGrid 提供三种使用方式：
 | `ud <文件> [目录]` | 本地文件和可选远程目录 | 上传文件 |
 | `rm <路径> [-r]` | 路径和可选递归参数 | 删除文件/目录 |
 | `mv <源> <目标>` | 源路径和目标路径 | 移动/重命名 |
-| `file <路径>` | 文件路径 | 查看文件类型 |
 | `find <模式> [-t 类型]` | 搜索模式和可选类型 | 查找文件 |
 | `ps` | 无 | 获取进程列表 |
+| `process` | 无 | 同 ps 命令 |
+| `kill <PID>` | 进程ID | 结束进程 |
 | `process` | 无 | 同 ps 命令 |
 | `kill <PID>` | 进程ID | 结束进程 |
 | `terminate <PID>` | 进程ID | 同 kill 命令 |
@@ -202,24 +203,6 @@ rm /tmp/cache -r         # Linux 删除目录
 mv old.txt new.txt       # 重命名
 mv file.txt /tmp         # 移动到 /tmp
 mv demo/old demo/new     # 移动并重命名
-```
-
-### file
-查看文件类型，支持识别：
-- text (txt, md, csv, json, xml, ini, log)
-- executable (exe, bat, cmd, sh, bin, dll, so, dylib)
-- image (jpg, jpeg, png, gif, bmp, svg, ico)
-- pdf
-- audio (mp3, wav, flac, aac)
-- video (mp4, avi, mkv, mov)
-- archive (zip, tar, gz, 7z, rar)
-- directory
-- shortcut
-
-```bash
-file document.pdf
-file script.py
-file archive.zip
 ```
 
 ### find
