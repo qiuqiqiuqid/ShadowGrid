@@ -165,6 +165,14 @@ def handle(cmd):
             full_path = os.path.abspath(full_path)
             if not os.path.isfile(full_path):
                 return {"status":"error","result":"File not found","result_type":"error"}
+            
+            # 检查文件大小以决定是否使用流式传输
+            file_size = os.path.getsize(full_path)
+            LARGE_FILE_THRESHOLD = 1024 * 512  # 512KB阈值，超过此大小使用流传输
+            
+            if file_size > LARGE_FILE_THRESHOLD:
+                # 文件过大，建议使用流式传输方式
+                return {"status": "info", "result": "File is large, use stream transfer instead", "result_type": "large_file", "file_size": file_size}
                 
             if (is_chunked_request or is_range_request) and range_start is not None and range_end is not None:
                 # 分块请求特定范围的文件内容
@@ -428,8 +436,20 @@ def handle(cmd):
             if not isinstance(p, dict) or "base64_data" not in p or "save_as" not in p:
                 return {"status": "error", "result": "Missing base64_data or save_as parameters", "result_type": "error"}
             
+            # 检查是否包含size信息以判断是否为流式上传
             base64_data = p.get("base64_data")
             save_as = p.get("save_as")
+            file_size_estimate = p.get("size", 0)
+            stream_upload = p.get("is_stream_upload", False)
+            
+            # 如果是流式上传或文件大小估计超出阈值，返回相应提示
+            LARGE_FILE_THRESHOLD = 1024 * 512  # 512KB 阈值
+            if stream_upload or file_size_estimate > LARGE_FILE_THRESHOLD:
+                # 指导调用方使用stream接口
+                return {"status": "info", "result": "Large file detected, use stream transfer instead", "result_type": "large_file_upload", "size_hint": file_size_estimate}
+            
+            if not isinstance(base64_data, str):
+                return {"status": "error", "result": "base64_data must be a string", "result_type": "error"}
             
             if not base64_data or not save_as:
                 return {"status": "error", "result": "Both base64_data and save_as must be specified", "result_type": "error"}
