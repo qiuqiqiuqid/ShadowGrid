@@ -870,6 +870,15 @@ def login():
 def interaction_loop(client_id, hostname):
     """设备交互循环"""
     global CURRENT_DEVICE, CURRENT_HOSTNAME, CURRENT_PATH
+    
+    # Disable PowerShell PSReadLine to prevent color override
+    if os.name == 'nt':
+        try:
+            import subprocess
+            subprocess.run(['powershell', '-Command', 'Set-PSReadLineOption -EditMode Windows'], 
+                         capture_output=True, timeout=1)
+        except Exception:
+            pass  # Ignore if fails
     CURRENT_DEVICE = client_id
     CURRENT_HOSTNAME = hostname
     CURRENT_PATH = os.getcwd().replace('/', '\\')
@@ -902,6 +911,7 @@ def interaction_loop(client_id, hostname):
             print(RESET, end="")  # Reset colors before prompt
             prompt = f"{BLUE}┌──({LGREEN}{remote_user}{RESET}@{PURPLE}{remote_hostname}{RESET})-[{CYAN}{CURRENT_PATH}{RESET}]{RESET}\n{BLUE}└─# {LGREEN}>{RESET} "
             cmd_input = input(prompt).strip()
+            print(RESET)  # Reset after input to prevent PowerShell override
         except EOFError:
             print(f"\n{GRAY}[信息]{RESET} 退出中...")
             return
