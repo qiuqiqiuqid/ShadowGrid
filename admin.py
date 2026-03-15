@@ -911,8 +911,6 @@ def interaction_loop(client_id, hostname):
                     with open(save_path, "wb") as f:
                         f.write(bytearray(file_bytes))
                     # Create animated progress bar effect for small files - 使用通用函数
-                    progress_line = create_progress_bar(file_size, file_size, label="下载", style="animated")
-                    time.sleep(0.1)  # Simulate process time
                     print(f"\r{LGREEN}[下载]{RESET} {progress_line}{RESET}", flush=True)
                     # Verify file integrity using the calculated hash and local file hash
                     local_file_hash = hashlib.md5()
