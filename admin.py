@@ -254,9 +254,9 @@ def print_failed_result(r):
     err = r.get("error", "")
     result = r.get("result", "")
     if err:
-        print(f"[错误] {err}")
+        print(f"{RED}[错误]{RESET} {err}{RESET}")
     elif isinstance(result, str):
-        print(f"[结果] {result}")
+        print(f"{GRAY}[结果]{RESET} {result}{RESET}")
 
 def format_file_size(size_bytes):
     """Format bytes to human readable format"""
