@@ -872,6 +872,14 @@ def interaction_loop(client_id, hostname):
     global CURRENT_DEVICE, CURRENT_HOSTNAME, CURRENT_PATH
     
     # Disable PowerShell PSReadLine to prevent color override
+    # Disable PSReadLine to prevent double prompt
+    if os.name == "nt":
+        try:
+            import subprocess
+            subprocess.run(["powershell", "-Command", "Remove-Module PSReadLine -ErrorAction SilentlyContinue"], capture_output=True, timeout=2)
+        except Exception:
+            pass
+    
     if os.name == 'nt':
         try:
             import subprocess
