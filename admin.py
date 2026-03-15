@@ -1087,6 +1087,8 @@ def interaction_loop(client_id, hostname):
             if results:
                 for r in results:
                     format_ls_output(r.get("result", []))
+                print(RESET, end="")  # Reset colors after ls output
+                print(RESET, end="")  # Reset colors after ls output
             else:
                 # 没有获取到结果，可能是命令执行时间长，所以我们先确认客户端是否真的掉线
                 if not check_client_online(client_id):
