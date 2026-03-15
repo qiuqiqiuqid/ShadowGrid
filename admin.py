@@ -26,6 +26,16 @@ except ImportError:
 
 from pathlib import Path
 
+
+# Enable ANSI escape codes on Windows
+if os.name == 'nt':
+    import ctypes
+    try:
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    except Exception:
+        pass  # Ignore if fails
+
 # 配置文件路径定义
 CONFIG_DIR = Path.home() / ".shadowgrid"
 CONFIG_FILE = CONFIG_DIR / "config.ini"
