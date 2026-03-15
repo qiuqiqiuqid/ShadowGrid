@@ -29,8 +29,11 @@ from pathlib import Path
 
 # Enable ANSI escape codes on Windows
 if os.name == 'nt':
-    import ctypes
+    # Method 1: os.system trick (most reliable)
+    os.system('')
+    # Method 2: ctypes (backup)
     try:
+        import ctypes
         kernel32 = ctypes.windll.kernel32
         kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
     except Exception:
@@ -892,7 +895,7 @@ def interaction_loop(client_id, hostname):
             remote_user = r.get("result", "").strip().split('\\')[-1].split('/')[-1]
     
     print(f"\n{BLUE}┌──({LGREEN}{remote_user}{RESET}@{PURPLE}{remote_hostname}{RESET})-[{CYAN}~{RESET}]{RESET}")
-    print(f"{BLUE}└─# {RESET}{LGREEN}{hostname}{RESET}:{YELLOW}{CURRENT_PATH}{RESET} ")
+    print(f"{BLUE}└─# {LGREEN}{hostname}{RESET}:{YELLOW}{CURRENT_PATH}{RESET} ", end="")
     
     while True:
         try:
