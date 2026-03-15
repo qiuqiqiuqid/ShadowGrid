@@ -955,7 +955,7 @@ def interaction_loop(client_id, hostname):
                             print(f"\r{LGREEN}[传输中]{RESET} 截图数据...", end="", flush=True)
                             time.sleep(0.05)
                             progress = create_progress_bar(img_size, img_size, label="传输", style="simple")
-                            print(f"\r{progress}", flush=True)
+                            print(f"\r{progress}{RESET}", flush=True)
                             
                             # 保存图片
                             os.makedirs("screenshots", exist_ok=True)
