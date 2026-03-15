@@ -746,14 +746,6 @@ def interaction_loop(client_id, hostname):
     """设备交互循环"""
     global CURRENT_DEVICE, CURRENT_HOSTNAME, CURRENT_PATH
     
-    # Enable ANSI on Linux/Unix
-    if os.name == 'nt' or os.name == 'posix':
-        try:
-            # For Linux/Unix terminals
-            print('[?25h', end='')  # Show cursor
-            print('[0m', end='')     # Reset all
-        except:
-            pass
     
     CURRENT_DEVICE = client_id
     CURRENT_HOSTNAME = hostname
