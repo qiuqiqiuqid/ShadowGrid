@@ -745,21 +745,16 @@ def login():
 def interaction_loop(client_id, hostname):
     """设备交互循环"""
     global CURRENT_DEVICE, CURRENT_HOSTNAME, CURRENT_PATH
-    # Disable PowerShell PSReadLine to prevent color override
-    # Disable PSReadLine to prevent double prompt
-    if os.name == "nt":
+    
+    # Enable ANSI on Linux/Unix
+    if os.name == 'nt' or os.name == 'posix':
         try:
-            import subprocess
-            subprocess.run(["powershell", "-Command", "Remove-Module PSReadLine -ErrorAction SilentlyContinue"], capture_output=True, timeout=2)
-        except Exception:
+            # For Linux/Unix terminals
+            print('[?25h', end='')  # Show cursor
+            print('[0m', end='')     # Reset all
+        except:
             pass
-    if os.name == 'nt':
-        try:
-            import subprocess
-            subprocess.run(['powershell', '-Command', 'Set-PSReadLineOption -EditMode Windows'], 
-                         capture_output=True, timeout=1)
-        except Exception:
-            pass  # Ignore if fails
+    
     CURRENT_DEVICE = client_id
     CURRENT_HOSTNAME = hostname
     CURRENT_PATH = os.getcwd().replace('/', '\\')
