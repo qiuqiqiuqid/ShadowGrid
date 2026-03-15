@@ -149,11 +149,11 @@ def format_ls_output(items):
             name = item.get("name", "")
             is_dir = item.get("dir", False)
             if is_dir:
-                print(f"  {name}/")
+                print(f"{CYAN}  {name}/{RESET}")
             else:
-                print(f"  {name}")
+                print(f"{YELLOW}  {name}{RESET}")
         else:
-            print(f"  {item}")
+            print(f"  {item}{RESET}")
 
 def print_clients():
     """打印设备列表"""
