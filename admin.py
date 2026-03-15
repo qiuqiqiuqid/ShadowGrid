@@ -250,7 +250,7 @@ def format_file_size(size_bytes):
         return f"{s}{size_names[i]}"
     else:
         return f"{size_bytes}B"
-def create_progress_bar(current, total, label="进度", show_percent=True, bar_length=30, style="default"):
+def create_progress_bar(current, total, label="进度", show_percent=True, bar_length=30, style="default", fixed_width=True):
     """
     通用进度条函数，供下载、上传、截图等所有功能调用
     参数:
@@ -292,11 +292,27 @@ def create_progress_bar(current, total, label="进度", show_percent=True, bar_l
             bar += indicator
         else:
             bar += empty_char
-    # 格式化输出
+    # 格式化输出 - 固定宽度避免晃动
     if show_percent:
-        current_str = format_file_size(current) if current < 1024*1024*1024 else f"{current/1024/1024:.1f}MB"
-        total_str = format_file_size(total) if total < 1024*1024*1024 else f"{total/1024/1024:.1f}MB"
-        progress_info = f" {current_str}/{total_str} [{bar}] {percent}%"
+        if fixed_width:
+            # 固定宽度格式，使用统一的数字宽度
+            if total >= 1024*1024*1024:  # GB
+                current_str = f"{current/1024/1024/1024:7.2f}GB"
+                total_str = f"{total/1024/1024/1024:7.2f}GB"
+            elif total >= 1024*1024:  # MB
+                current_str = f"{current/1024/1024:7.2f}MB"
+                total_str = f"{total/1024/1024:7.2f}MB"
+            elif total >= 1024:  # KB
+                current_str = f"{current/1024:7.2f}KB"
+                total_str = f"{total/1024:7.2f}KB"
+            else:  # Bytes
+                current_str = f"{current:7.0f}B "
+                total_str = f"{total:7.0f}B "
+            progress_info = f" {current_str}/{total_str} [{bar}] {percent:3d}%"
+        else:
+            current_str = format_file_size(current)
+            total_str = format_file_size(total)
+            progress_info = f" {current_str}/{total_str} [{bar}] {percent}%"
     else:
         progress_info = f" [{bar}]"
     return f"{label}: {progress_info}" if label else progress_info
@@ -468,7 +484,7 @@ def stream_upload_file(client_id, local_file, remote_path):
             file_hash_calc.update(chunk)
     original_hash = file_hash_calc.hexdigest()
     file_size = os.path.getsize(local_file)
-    chunk_size = 1024 * 256  # 256KB
+    chunk_size = 1024 * 1024  # 1MB - 提升速度
     total_chunks = (file_size + chunk_size - 1) // chunk_size  # 向上取整
     print(f"\n{LGREEN}[信息]{RESET} 开始上传: {CYAN}{local_file}{RESET} -> {CYAN}{remote_path}{RESET} ({format_file_size(file_size)})")
     print(f"{LGREEN}[信息]{RESET} 文件大小: {format_file_size(file_size)}, 分块数: {total_chunks}")
