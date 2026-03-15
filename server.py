@@ -16,7 +16,7 @@ from pydantic import BaseModel
 import uvicorn
 import ssl
 
-ADMIN_PASSWORD = "admin123"
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 
 SERVER_URL = "113.45.254.80:8444"
 SERVER_HOST = "0.0.0.0"
