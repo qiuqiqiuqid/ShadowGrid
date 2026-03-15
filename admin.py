@@ -198,7 +198,7 @@ def fetch_clients():
         CLIENTS = resp.get("clients", [])
         return CLIENTS
     except Exception as e:
-        print(f"[错误] 获取设备列表失败: {e}")
+        print(f"{RED}[错误]{RESET} 获取设备列表失败：{e}{RESET}")
         return []
 
 def send_command(client_id, cmd_type, payload=None):
@@ -1514,7 +1514,7 @@ def add_settings_command_logic():
                 print(f"{CYAN}[当前配置]{RESET}")
                 for key, value in CONFIG.items():
                     if key != 'last_password':  # 隐私考虑，不显示密码
-                        print(f"  {key}: {value}")
+                        print(f"  {CYAN}{key}{RESET}: {YELLOW}{value}{RESET}")
             elif setting_name == "reset":
                 CONFIG.clear()
                 CONFIG.update({
@@ -1665,7 +1665,7 @@ def main():
                 if matching_cmds:
                     print(f"{GREEN}[补全结果]{RESET}")
                     for m in matching_cmds:
-                        print(f"  {m}")
+                        print(f"  {YELLOW}{m}{RESET}")
                 else:
                     print(f"{GRAY}[补全]{RESET} 未找到匹配的命令")
         # 设置命令 - 在这里添加设置命令
@@ -1693,7 +1693,7 @@ def main():
                     print(f"{CYAN}[当前配置]{RESET}")
                     for key, value in CONFIG.items():
                         if key != 'last_password':  # 隐私考虑，不显示密码
-                            print(f"  {key}: {value}")
+                            print(f"  {CYAN}{key}{RESET}: {YELLOW}{value}{RESET}")
                 elif setting_name == "reset":
                     CONFIG.clear()
                     CONFIG.update({
