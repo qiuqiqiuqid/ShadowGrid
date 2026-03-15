@@ -977,6 +977,9 @@ def interaction_loop(client_id, hostname):
                 else:
                     # 客户端仍然在线，只是命令执行时间较长
                     print(f"{YELLOW}[信息]{RESET} 命令仍在执行，请稍候...")
+        elif cmd == "pwd":
+            print(f"{CYAN}{CURRENT_PATH}{RESET}")
+
         elif cmd == "cd":
             if not arg:
                 print(f"{RED}[错误]{RESET} 用法: cd <目录>")
