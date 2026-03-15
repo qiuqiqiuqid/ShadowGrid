@@ -1121,7 +1121,7 @@ def interaction_loop(client_id, hostname):
                     if r.get("result_type") == "dir":
                         CURRENT_PATH = full_path
                         print(f"{LGREEN}[结果]{RESET} 已切换到目录 {CYAN}{CURRENT_PATH}{RESET}")
-                print(RESET, end="")
+                        print(RESET, end="")  # Reset terminal
                     else:
                         print_failed_result(r)
             else:
