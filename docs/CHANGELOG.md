@@ -5,6 +5,22 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 并遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)。
 
+## [未发布]
+
+### 修复
+- 修复 `admin.py` 中 `UnboundLocalError: cannot access local variable 'time'` 错误
+- 删除 `stream_upload_file` 函数的重复定义（保留带完整性校验的完整版本）
+- 移除函数内部冗余的 `import time` 语句，避免作用域冲突
+
+## [1.2.2] - 2026-03-15
+
+### 修复
+- 修复 `admin.py` 中 `UnboundLocalError: cannot access local variable 'time'` 错误
+- 删除 `stream_upload_file` 函数的重复定义（保留带完整性校验的完整版本）
+- 移除函数内部冗余的 `import time` 语句，避免作用域冲突
+
+---
+
 ## [1.2.1] - 2026-03-15
 
 ### 新功能
