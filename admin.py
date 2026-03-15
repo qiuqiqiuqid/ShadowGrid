@@ -274,55 +274,81 @@ def format_file_size(size_bytes):
     else:
         return f"{size_bytes}B"
 
-def create_stream_download_progress_bar(downloaded, total, speed_str):
-    """Create a progress bar with animation effect for streaming downloads"""
+def create_progress_bar(current, total, label="进度", show_percent=True, bar_length=30, style="default"):
+    """
+    通用进度条函数，供下载、上传、截图等所有功能调用
+    
+    参数:
+        current: 当前完成的字节数/数量
+        total: 总字节数/数量
+        label: 进度条标签（如"下载"、"上传"、"传输"）
+        show_percent: 是否显示百分比
+        bar_length: 进度条长度（字符数）
+        style: 进度条样式 ("default", "simple", "animated")
+    
+    返回:
+        格式化的进度条字符串
+    """
     if total <= 0:
         percent = 0
-        bar_length = 0
-    else:
-        percent = int(min(100, (downloaded / total) * 100))
-        bar_length = int(min(30, (downloaded / total) * 30)) if total > 0 else 0
-    
-    # 动画效果 - 根据百分比显示不同阶段的字符
-    bar = ""
-    for i in range(30):
-        if i < bar_length:
-            bar += "█"
-        elif i == bar_length:  # 当前进度指示
-            bar += "●"  # 指示当前块进度
-        else:
-            bar += "░"
-    
-    downloaded_str = format_file_size(downloaded)
-    total_str = format_file_size(total)
-    
-    progress_info = f" {downloaded_str}/{total_str} [{bar}] {percent}% ({speed_str})"
-    return progress_info
-
-def create_small_file_progress_bar(current, total, file_size_str):
-    """Create a simple animated progress bar for small files"""
-    if total <= 0:
-        percent = 0
-        bar_length = 0
+        bar_length_actual = 0
     else:
         percent = int(min(100, (current / total) * 100))
-        bar_length = int(min(30, (current / total) * 30)) if total > 0 else 0
+        bar_length_actual = int(min(bar_length, (current / total) * bar_length))
     
-    # 简洁的动画效果 - 使用填充和动画字符
+    # 根据样式选择进度条字符
+    if style == "simple":
+        fill_char = "▓"
+        empty_char = "░"
+        indicator = ""
+    elif style == "animated":
+        fill_char = "▓"
+        empty_char = "░"
+        # 动画效果：根据当前值奇偶性改变指示符
+        indicator = "→" if current % 2 == 0 else "»"
+    else:  # default
+        fill_char = "█"
+        empty_char = "░"
+        indicator = "●"
+    
+    # 构建进度条
     bar = ""
-    for i in range(30):
-        if i < bar_length:
-            bar += "▓"
-        elif i == bar_length:  # 当前位置指示
-            if current % 2 == 0:
-                bar += "→"  # 动画字符随着下载波动
-            else:
-                bar += "»"
+    for i in range(bar_length):
+        if i < bar_length_actual:
+            bar += fill_char
+        elif i == bar_length_actual and indicator:
+            bar += indicator
         else:
-            bar += "░"
+            bar += empty_char
     
-    progress_info = f" {file_size_str} [{bar}] {percent}%"
-    return progress_info
+    # 格式化输出
+    if show_percent:
+        current_str = format_file_size(current) if current < 1024*1024*1024 else f"{current/1024/1024:.1f}MB"
+        total_str = format_file_size(total) if total < 1024*1024*1024 else f"{total/1024/1024:.1f}MB"
+        progress_info = f" {current_str}/{total_str} [{bar}] {percent}%"
+    else:
+        progress_info = f" [{bar}]"
+    
+    return f"{label}: {progress_info}" if label else progress_info
+
+
+def create_stream_download_progress_bar(downloaded, total, speed_str):
+    """Create a progress bar with animation effect for streaming downloads"""
+    progress = create_progress_bar(downloaded, total, label="", style="default")
+    return f"{progress} ({speed_str})"
+
+
+def create_small_file_progress_bar(current, total, file_size_str=None):
+    """Create a simple animated progress bar for small files"""
+    if file_size_str is None:
+        file_size_str = format_file_size(current)
+    progress = create_progress_bar(current, total, label="", style="animated")
+    # 简化显示
+    if total <= 0:
+        percent = 0
+    else:
+        percent = int(min(100, (current / total) * 100))
+    return f" {file_size_str} [{progress.split('[')[1].split(']')[0]}] {percent}%"
 
 def stream_download_file(client_id, file_path, save_path):
     """Stream download a large file with progress reporting and integrity verification"""
@@ -917,14 +943,38 @@ def interaction_loop(client_id, hostname):
                         img_data = r.get("result", "")
                         filename = r.get("filename", "shot.png")
                         try:
+                            # 解码图片数据
                             img_bytes = base64.b64decode(img_data)
+                            img_size = len(img_bytes)
+                            
+                            # 计算 MD5 校验和
+                            import hashlib
+                            img_hash = hashlib.md5(img_bytes).hexdigest()
+                            
+                            # 显示进度条动画
+                            print(f"\r{LGREEN}[传输中]{RESET} 截图数据...", end="", flush=True)
+                            time.sleep(0.05)
+                            progress = create_progress_bar(img_size, img_size, label="传输", style="simple")
+                            print(f"\r{progress}", flush=True)
+                            
+                            # 保存图片
                             os.makedirs("screenshots", exist_ok=True)
                             save_path = os.path.join("screenshots", f"{client_id}_{get_timestamp()}_{filename}")
                             with open(save_path, "wb") as f:
                                 f.write(img_bytes)
-                            print(f"{LGREEN}[结果]{RESET} 截图已保存: {CYAN}{save_path}{RESET}")
+                            
+                            # 验证文件完整性
+                            with open(save_path, "rb") as f_verify:
+                                saved_hash = hashlib.md5(f_verify.read()).hexdigest()
+                            
+                            if img_hash == saved_hash:
+                                print(f"{LGREEN}[完成]{RESET} 截图已保存：{CYAN}{save_path}{RESET} (校验：√)")
+                                print(f"{LGREEN}[统计]{RESET} 大小：{format_file_size(img_size)}, MD5: {PURPLE}{img_hash[:8]}...{img_hash[-8:]}{RESET}")
+                            else:
+                                print(f"{RED}[✗ 校验]{RESET} 文件完整性校验失败 - 截图可能损坏")
+                                print(f"{CYAN}[结果]{RESET} 截图已保存 (可能需要重新截取): {CYAN}{save_path}{RESET}")
                         except Exception as e:
-                            print(f"{RED}[错误]{RESET} 无法保存截图: {DRED}{e}{RESET}")
+                            print(f"{RED}[错误]{RESET} 无法保存截图：{DRED}{e}{RESET}")
                     elif r.get("result_type") == "error":
                         print_failed_result(r)
         elif cmd == "ls":
@@ -982,141 +1032,8 @@ def interaction_loop(client_id, hostname):
                     else:
                         print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
                 except Exception as e:
-                    print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
-                return
-        elif cmd == "pwd":
-            send_command(client_id, "pwd")
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    print(f"{CYAN}[结果]{RESET} {r.get('result', '')}")
-            else:
-                # 检测到客户端下线
-                print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
-                CURRENT_DEVICE = None
-                CURRENT_HOSTNAME = ""
-                print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
-                try:
-                    fetch_clients()
-                    if CLIENTS:
-                        print_clients()
-                    else:
-                        print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
-                except Exception as e:
-                    print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
-                return
-        elif cmd == "cat":
-            if not arg:
-                print(f"{RED}[错误]{RESET} 用法: cat <文件路径>")
-                continue
-            full_path = os.path.normpath(os.path.join(CURRENT_PATH, arg))
-            send_command(client_id, "cat", full_path)
-            results = wait_for_result(client_id)
-            if results:
-                for r in results:
-                    if r.get("result_type") == "file":
-                        file_data = r.get("result", "")
-                        if file_data:
-                            try:
-                                content = base64.b64decode(file_data).decode()
-                                print(f"{LGREEN}[结果]{RESET}")
-                                print(f"{DCYAN}{content}{RESET}")
-                            except Exception as e:
-                                print(f"{RED}[错误]{RESET} 解码失败: {DRED}{e}{RESET}")
-                        else:
-                            print(f"{RED}[错误]{RESET} 文件为空")
-                    else:
-                        print_failed_result(r)
-            else:
-                # 检测到客户端下线
-                print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
-                CURRENT_DEVICE = None
-                CURRENT_HOSTNAME = ""
-                print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
-                try:
-                    fetch_clients()
-                    if CLIENTS:
-                        print_clients()
-                    else:
-                        print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
-                except Exception as e:
-                    print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
-                return
-        elif cmd == "dl":
-            if not arg:
-                print(f"{RED}[错误]{RESET} 用法: dl <文件路径> [保存目录]")
-                continue
-            parts = arg.split(maxsplit=1)
-            file_path = parts[0]
-            save_dir = parts[1] if len(parts) > 1 else "downloads"
-            full_path = os.path.normpath(os.path.join(CURRENT_PATH, file_path))
-            os.makedirs(save_dir, exist_ok=True)
-            
-            # 獲取文件信息來檢查大小
-            send_command(client_id, "dl", {"path": file_path, "save_as": ""})
-            results = wait_for_result(client_id)
-            
-            if results:
-                r = results[0]  # 获取第一个结果
-                # 检查是否是大文件通知，需切换到流式传输
-                if r.get("result_type") == "large_file":
-                    file_size = r.get("file_size", 0)
-                    print(f"{YELLOW}[提示]{RESET} 检测到大文件 ({format_file_size(file_size)})，自动启用流式传输...")
-                    download_path = os.path.join(save_dir, os.path.basename(file_path))
-                    success = stream_download_file(client_id, file_path, download_path)
-                    if success:
-                        print(f"{LGREEN}[完成]{RESET} 大文件完整校验: √")
-                elif r.get("result_type") == "file":
-                    # 标准下载处理
-                    import hashlib
-                    file_bytes = base64.b64decode(r.get("result", ""))
-                    
-                    # Calculate file hash for later comparison
-                    file_hash = hashlib.md5(file_bytes).hexdigest()
-                    file_size = len(file_bytes)
-                    
-                    save_path = os.path.join(save_dir, r.get("filename", "downloaded"))
-                    with open(save_path, "wb") as f:
-                        f.write(bytearray(file_bytes))
-                        
-                    # Create animated progress bar effect for small files
-                    time.sleep(0.1) # Simulate process time
-                    progress_line = create_small_file_progress_bar(file_size, file_size, format_file_size(file_size))
-                    print(f"\r{LGREEN}[下载]{RESET} {progress_line}")
-                    
-                    # Verify file integrity using the calculated hash and local file hash
-                    local_file_hash = hashlib.md5()
-                    with open(save_path, "rb") as f_verify:
-                        while True:
-                            chunk = f_verify.read(1024*512)  # 512KB chunks
-                            if not chunk:
-                                break
-                            local_file_hash.update(chunk)
-                    local_hash = local_file_hash.hexdigest()
-                    
-                    if local_hash == file_hash:
-                        print(f"{CYAN}[完成]{RESET} 文件已下载: {CYAN}{save_path}{RESET} (校验: √)")
-                        print(f"{LGREEN}[统计]{RESET} 文件: {format_file_size(file_size)}")
-                    else:
-                        print(f"{RED}[✗ 校验]{RESET} 文件完整性校验失败 - 文件可能损坏")
-                        print(f"{CYAN}[结果]{RESET} 文件已下载 (需要重新下载): {CYAN}{save_path}{RESET}")
-                else:
-                    print_failed_result(r)
-            else:
-                # 检测到客户端下线
-                print(f"\n{RED}[警告]{RESET} {YELLOW}客户端 {hostname} 已下线{RESET}")
-                CURRENT_DEVICE = None
-                CURRENT_HOSTNAME = ""
-                print(f"{LGREEN}[信息]{RESET} 更新设备列表...")
-                try:
-                    fetch_clients()
-                    if CLIENTS:
-                        print_clients()
-                    else:
-                        print(f"{GRAY}[信息]{RESET} 暂无已连接的设备")
-                except Exception as e:
-                    print(f"{RED}[错误]{RESET} 获取设备列表失败: {e}")
-                return
+                    print(f"{RED}[错误]{RESET} 获取设备列表失败：{e}")
+                return  # 只在客户端下线时返回
         elif cmd == "ud":
             if not arg:
                 print(f"{RED}[错误]{RESET} 用法: ud <本地文件> [远程目录]")
@@ -1153,13 +1070,15 @@ def interaction_loop(client_id, hostname):
                         file_hash_calc.update(chunk)
                 original_hash = file_hash_calc.hexdigest()
                 
-                # 显示进度条动画
+                # 显示进度条动画 - 使用通用函数
+                progress_line = create_progress_bar(0, file_size, label="上传", style="animated")
                 animation_step = 0
                 for i in range(3):
-                    dots = '.' * (animation_step % 4)
-                    print(f"\r{LGREEN}[上傳中]{RESET} {CYAN}{os.path.basename(local_file)}{RESET} {dots}", end="", flush=True) 
+                    print(f"\r{progress_line}", end="", flush=True)
                     time.sleep(0.1)
                     animation_step += 1
+                    # 更新进度显示
+                    progress_line = create_progress_bar((i+1) * file_size // 3, file_size, label="上传", style="animated")
                 
                 # 普通方式上传小文件
                 with open(local_file, "rb") as f:
