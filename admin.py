@@ -709,7 +709,7 @@ def stream_upload_file(client_id, local_file, remote_path):
                     
                     # Update progress
                     progress_line = create_stream_download_progress_bar(downloaded_bytes, file_size, speed_str)
-                    print(f"\r{progress_line}", end="", flush=True)
+                    print(f"\r{CYAN}[下载]{RESET} {progress_line}{RESET}", end="", flush=True)
                     
                 except Exception as e:
                     print(f"\n{RED}[错误]{RESET} 解码块数据时出错: {e}")
@@ -1031,7 +1031,7 @@ def interaction_loop(client_id, hostname):
                     # Create animated progress bar effect for small files - 使用通用函数
                     progress_line = create_progress_bar(file_size, file_size, label="下载", style="animated")
                     time.sleep(0.1)  # Simulate process time
-                    print(f"\r{progress_line}", flush=True)
+                    print(f"\r{LGREEN}[下载]{RESET} {progress_line}{RESET}", flush=True)
                     
                     # Verify file integrity using the calculated hash and local file hash
                     local_file_hash = hashlib.md5()
@@ -1163,7 +1163,7 @@ def interaction_loop(client_id, hostname):
                 progress_line = create_progress_bar(0, file_size, label="上传", style="animated")
                 animation_step = 0
                 for i in range(3):
-                    print(f"\r{progress_line}", end="", flush=True)
+                    print(f"\r{LGREEN}[上传]{RESET} {progress_line}{RESET}", end="", flush=True)
                     time.sleep(0.1)
                     animation_step += 1
                     # 更新进度显示
@@ -1190,7 +1190,7 @@ def interaction_loop(client_id, hostname):
                         else:
                             # Display progress bar for small upload completion - 使用通用函数
                             progress_line = create_progress_bar(file_size, file_size, label="上传", style="simple")
-                            print(f"\r{LGREEN}[完成]{RESET} {progress_line}")
+                            print(f"\r{LGREEN}[完成]{RESET} {progress_line}{RESET}")
                             
                             # Verify with server response if available
                             if r.get("result_type") == "ok":
