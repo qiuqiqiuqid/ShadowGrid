@@ -1,39 +1,22 @@
+
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.class
 *.so
-.Python
-venv/
-env/
-ENV/
 
-# Build artifacts
-build/
-dist/
-*.spec.bak
+# ShadowGrid generated files
+downloads/
+screenshots/
+certs/*.pem
+key.pem
+cert.pem
 
 # IDE
-.idea/
 .vscode/
-*.swp
-*.swo
-*~
+.idea/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Sensitive
-*.pem
-*.key
-cert.pem
-key.pem
-
-# Data
-screenshots/
-*.log
-*.db
-
-# Debug
-test_*.py
