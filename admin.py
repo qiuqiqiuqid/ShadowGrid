@@ -1068,7 +1068,7 @@ def interaction_loop(client_id, hostname):
                         print(f"{LGREEN}[完成]{RESET} 大文件完整校验: √")
                 elif r.get("result_type") == "file":
                     # 标准下载处理
-                    import time, hashlib
+                    import hashlib
                     file_bytes = base64.b64decode(r.get("result", ""))
                     
                     # Calculate file hash for later comparison
@@ -1140,8 +1140,8 @@ def interaction_loop(client_id, hostname):
                 remote_filename = os.path.join(remote_dir, os.path.basename(local_file))
                 stream_upload_file(client_id, local_file, remote_filename)
             else:
-                # 对于小文件，显示美观的进度条 - 首先计算文件hash
-                import time, hashlib
+                # 对于小文件，显示美观的进度条 - 首先计算文件 hash
+                import hashlib
                 
                 # Calculate local file hash for verification
                 file_hash_calc = hashlib.md5()
