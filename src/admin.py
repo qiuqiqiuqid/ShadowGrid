@@ -650,9 +650,9 @@ def print_help():
     print(f"  {YELLOW}use <编号>{RESET}          {LGREEN}选择设备{RESET}")
     print(f"  {YELLOW}back{RESET}              {LGREEN}返回设备列表{RESET}")
     print(f"  {YELLOW}clear{RESET}             {LGREEN}清屏{RESET}")
-    print(f"  {YELLOW}history{RESET}           {LGREEN}查看命令历史{RESET}")
-    print(f"  {YELLOW}history -c{RESET}        {LGREEN}清除命令历史{RESET}")
-    print(f"  {YELLOW}!!{RESET}                {LGREEN}执行上一条命令（待完善）{RESET}")
+    # [已禁用] print(f"  {YELLOW}history{RESET}           {LGREEN}查看命令历史{RESET}")
+    # [已禁用] print(f"  {YELLOW}history -c{RESET}        {LGREEN}清除命令历史{RESET}")
+    # [已禁用] print(f"  {YELLOW}!!{RESET}                {LGREEN}执行上一条命令（待完善）{RESET}")
     print(f"  {YELLOW}help{RESET}              {LGREEN}显示帮助{RESET}")
     print(f"  {YELLOW}quit{RESET}              {LRED}退出{RESET}")
     print("")
@@ -1533,7 +1533,11 @@ def main():
                 print(f"{RED}[错误]{RESET} 用法: compgen <part_of_cmd>")
             else:
                 # 自动补全常见命令
-                all_cmds = ["list", "use", "back", "clear", "history", "!!", 
+                all_cmds = ["list", "use", "back", "clear",
+                           "help", "quit", "screenshot", "ls", "cd", "pwd",
+                           "cat", "dl", "ud", "rm", "mv", "file", "find",
+                           "shell", "ps", "process", "kill", "terminate",
+                           "persist", "install", "setting", "settings", "config"]
                            "help", "quit", "screenshot", "ls", "cd", "pwd", 
                            "cat", "dl", "ud", "rm", "mv", "file", "find", 
                            "shell", "ps", "process", "kill", "terminate", 
