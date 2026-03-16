@@ -1534,14 +1534,6 @@ def main():
             else:
                 # 自动补全常见命令
                 all_cmds = ["list", "use", "back", "clear",
-                           "help", "quit", "screenshot", "ls", "cd", "pwd",
-                           "cat", "dl", "ud", "rm", "mv", "file", "find",
-                           "shell", "ps", "process", "kill", "terminate",
-                           "persist", "install", "setting", "settings", "config"]
-                           "help", "quit", "screenshot", "ls", "cd", "pwd", 
-                           "cat", "dl", "ud", "rm", "mv", "file", "find", 
-                           "shell", "ps", "process", "kill", "terminate", 
-                           "persist", "install", "setting", "settings", "config"]
                 matching_cmds = [c for c in all_cmds if c.startswith(arg)]
                 if matching_cmds:
                     print(f"{GREEN}[补全结果]{RESET}")
